@@ -27,10 +27,11 @@ const fadeUp = {
 };
 
 export default function ProfilePage() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, role, refreshProfile } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const [stats, setStats] = useState<ProfileStats>({
     applied: 0,
     interviews: 0,
@@ -114,6 +115,33 @@ export default function ProfilePage() {
       showToast("Failed to save profile", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSwitchRole = async () => {
+    setSwitchingRole(true);
+    try {
+      const newRole = role === "employer" ? "seeker" : "employer";
+      const token = await getToken();
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!res.ok) throw new Error("Failed to switch role");
+      await refreshProfile();
+      showToast(
+        `Switched to ${newRole === "employer" ? "Employer" : "Job Seeker"} mode`,
+        "success"
+      );
+      router.push(newRole === "employer" ? "/employer" : "/");
+    } catch {
+      showToast("Failed to switch role", "error");
+    } finally {
+      setSwitchingRole(false);
     }
   };
 
@@ -280,6 +308,27 @@ export default function ProfilePage() {
                 whileTap={{ scale: 0.98 }}
               >
                 {saving ? "Saving..." : "Save Changes"}
+              </motion.button>
+
+              {/* Switch Role */}
+              <motion.button
+                onClick={handleSwitchRole}
+                disabled={switchingRole}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 py-3 text-sm font-medium text-zinc-300 transition-colors hover:border-emerald-600 hover:text-white disabled:opacity-50"
+                variants={fadeUp}
+                whileTap={{ scale: 0.98 }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 014-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 01-4 4H3" />
+                </svg>
+                {switchingRole
+                  ? "Switching..."
+                  : role === "employer"
+                    ? "Switch to Job Seeker"
+                    : "Switch to Employer"}
               </motion.button>
 
               {/* Sign Out */}
