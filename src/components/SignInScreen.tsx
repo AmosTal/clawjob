@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
@@ -50,8 +51,16 @@ export default function SignInScreen() {
     setError("");
     setGoogleLoading(true);
 
+    const provider = new GoogleAuthProvider();
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      if (isMobile) {
+        await signInWithRedirect(auth, provider);
+        // Browser navigates away; loading state doesn't matter
+        return;
+      }
+      await signInWithPopup(auth, provider);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       if (code !== "auth/popup-closed-by-user") {

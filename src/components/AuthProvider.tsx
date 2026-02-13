@@ -8,7 +8,11 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+  getRedirectResult,
+} from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 
@@ -30,6 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const profileCreated = useRef(false);
 
   useEffect(() => {
+    // Resolve any pending redirect sign-in (e.g. Google on mobile)
+    getRedirectResult(auth).catch(() => {
+      // Redirect errors (e.g. account-exists-with-different-credential) are
+      // non-critical here — onAuthStateChanged handles the happy path.
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
