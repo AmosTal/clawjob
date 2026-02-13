@@ -1,0 +1,45 @@
+steps:
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:latest'
+      - '.'
+
+  # Push commit SHA tagged image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
+
+  # Push latest tagged image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'clawjob'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+
+images:
+  - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:latest'
