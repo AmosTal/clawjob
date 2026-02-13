@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
 import { verifyAuth } from "@/lib/auth";
-import { getAllJobs } from "@/lib/db";
-import type { JobCard } from "@/lib/types";
+import { getAllUsers } from "@/lib/db";
 
 function isAdmin(email: string): boolean {
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
@@ -24,23 +22,6 @@ export async function GET(request: Request) {
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
   const offset = Number(url.searchParams.get("offset") ?? 0);
 
-  const result = await getAllJobs(limit, offset);
+  const result = await getAllUsers(limit, offset);
   return NextResponse.json(result);
-}
-
-export async function POST(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (!isAdmin(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const body = await request.json();
-  const docRef = adminDb.collection("jobs").doc();
-  const job: JobCard = { ...body, id: docRef.id };
-  await docRef.set(job);
-
-  return NextResponse.json(job, { status: 201 });
 }

@@ -1,20 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import SignInScreen from "@/components/SignInScreen";
+import RoleSelectScreen from "@/components/RoleSelectScreen";
 import SwipeDeck from "@/components/SwipeDeck";
 import AppShell from "@/components/AppShell";
 import { auth } from "@/lib/firebase-client";
 import type { JobCard, Application } from "@/lib/types";
 
 export default function HomePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, role } = useAuth();
+  const router = useRouter();
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (user && role === "employer") {
+      router.replace("/employer");
+    }
+  }, [user, role, router]);
+
+  useEffect(() => {
+    if (!user || role !== "seeker") return;
 
     let cancelled = false;
 
@@ -50,18 +58,18 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, role]);
 
-  if (authLoading) {
+  if (!role) {
+    return <RoleSelectScreen />;
+  }
+
+  if (role === "employer") {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-zinc-950">
         <span className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
       </div>
     );
-  }
-
-  if (!user) {
-    return <SignInScreen />;
   }
 
   return (

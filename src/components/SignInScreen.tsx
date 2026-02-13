@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   signInWithEmailAndPassword,
@@ -81,9 +82,11 @@ export default function SignInScreen() {
       >
         {/* Logo */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-black tracking-tight text-white">
-            claw<span className="text-emerald-400">job</span>
-          </h1>
+          <Link href="/" className="inline-block">
+            <h1 className="text-4xl font-black tracking-tight text-white">
+              claw<span className="text-emerald-400">job</span>
+            </h1>
+          </Link>
           <p className="mt-2 text-sm text-zinc-400">
             Swipe your way to your next career
           </p>

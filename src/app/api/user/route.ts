@@ -57,16 +57,18 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, bio, resumeURL } = body as {
+    const { name, bio, resumeURL, role } = body as {
       name?: string;
       bio?: string;
       resumeURL?: string;
+      role?: "seeker" | "employer";
     };
 
     const updates: Record<string, string> = {};
     if (name !== undefined) updates.name = name;
     if (bio !== undefined) updates.bio = bio;
     if (resumeURL !== undefined) updates.resumeURL = resumeURL;
+    if (role === "seeker" || role === "employer") updates.role = role;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

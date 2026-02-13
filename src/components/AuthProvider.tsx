@@ -15,23 +15,52 @@ import {
 } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
+import type { UserProfile } from "@/lib/types";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  role: UserProfile["role"] | undefined;
+  userProfile: UserProfile | null;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
+  role: undefined,
+  userProfile: null,
+  refreshProfile: async () => {},
   signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const profileCreated = useRef(false);
+
+  const fetchProfile = useCallback(async (firebaseUser: User) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch("/api/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const profile: UserProfile = await res.json();
+        setUserProfile(profile);
+      }
+    } catch {
+      // Silently ignore — profile fetch is best-effort
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (auth.currentUser) {
+      await fetchProfile(auth.currentUser);
+    }
+  }, [fetchProfile]);
 
   useEffect(() => {
     // Resolve any pending redirect sign-in (e.g. Google on mobile)
@@ -40,43 +69,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // non-critical here — onAuthStateChanged handles the happy path.
     });
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      setLoading(false);
 
-      // On first sign-in, create user profile (fire-and-forget)
-      if (firebaseUser && !profileCreated.current) {
-        profileCreated.current = true;
-        firebaseUser.getIdToken().then((token) => {
-          fetch("/api/user", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-            }),
-          }).catch(() => {
+      if (firebaseUser) {
+        // On first sign-in, create user profile then fetch it
+        if (!profileCreated.current) {
+          profileCreated.current = true;
+          try {
+            const token = await firebaseUser.getIdToken();
+            await fetch("/api/user", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+              }),
+            });
+          } catch {
             // fire-and-forget: silently ignore errors
-          });
-        });
+          }
+        }
+        await fetchProfile(firebaseUser);
+      } else {
+        setUserProfile(null);
       }
+
+      setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
     profileCreated.current = false;
+    setUserProfile(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        role: userProfile?.role,
+        userProfile,
+        refreshProfile,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

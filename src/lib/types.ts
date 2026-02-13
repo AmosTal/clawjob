@@ -29,6 +29,8 @@ export interface JobCard {
   companyLogo?: string;
   teamSize?: string;
   culture?: string[];
+  employerId?: string;
+  createdAt?: string;
 }
 
 export interface Application {
@@ -55,5 +57,6 @@ export interface UserProfile {
   photoURL?: string;
   bio?: string;
   resumeURL?: string;
+  role?: "seeker" | "employer";
   createdAt: string;
 }

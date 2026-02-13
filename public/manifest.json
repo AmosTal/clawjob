@@ -1,7 +1,7 @@
 {
   "name": "clawjob",
   "short_name": "clawjob",
-  "description": "Swipe your way to your next career",
+  "description": "Swipe your way to your dream job",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",
