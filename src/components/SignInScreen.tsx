@@ -65,7 +65,8 @@ export default function SignInScreen() {
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       if (code !== "auth/popup-closed-by-user") {
-        setError("Google sign-in failed. Please try again.");
+        console.error("Google Sign-In Error:", err);
+        setError(`Google sign-in failed: ${code} - ${(err as Error).message}`);
       }
     } finally {
       setGoogleLoading(false);
