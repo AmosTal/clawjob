@@ -11,8 +11,9 @@ import { createInterface } from "readline";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const PROJECT = "clawjob";
+const REGION = "us-central1";
 const LIVE_URL = "https://clawjob-yb6z4mnc2q-uc.a.run.app";
-const BUILD_URL = `https://console.cloud.google.com/cloud-build/builds?project=${PROJECT}`;
+const BUILD_URL = `https://console.cloud.google.com/cloud-build/builds;region=${REGION}?project=${PROJECT}`;
 const REPO = "AmosTal/clawjob";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -52,22 +53,36 @@ async function monitorGcloud(): Promise<boolean | null> {
 
   try {
     const buildId = exec(
-      `gcloud builds list --project=${PROJECT} --limit=1 --format="value(id)"`
+      `gcloud builds list --project=${PROJECT} --region=${REGION} --limit=1 --format="value(id)"`
     );
     if (!buildId) return null;
 
     log(`📋 Build ${buildId.slice(0, 8)}…\n`);
 
-    // Stream logs — blocks until build finishes
-    spawnSync("gcloud", ["builds", "log", "--stream", buildId, `--project=${PROJECT}`], {
-      stdio: "inherit",
-      shell: true,
-    });
+    // Poll build status with spinner (streaming logs requires Cloud Storage bucket)
+    let frame = 0;
+    const t0 = Date.now();
+    const TIMEOUT = 10 * 60_000;
+    let buildStatus = "";
 
-    const status = exec(
-      `gcloud builds list --project=${PROJECT} --limit=1 --format="value(status)"`
-    );
-    return status === "SUCCESS";
+    while (Date.now() - t0 < TIMEOUT) {
+      buildStatus = exec(
+        `gcloud builds describe ${buildId} --project=${PROJECT} --region=${REGION} --format="value(status)"`
+      );
+
+      const elapsed = Math.floor((Date.now() - t0) / 1000);
+      const spin = SPIN[frame++ % SPIN.length];
+
+      if (buildStatus === "SUCCESS" || buildStatus === "FAILURE" || buildStatus === "CANCELLED") {
+        process.stdout.write("\r" + " ".repeat(60) + "\r");
+        break;
+      }
+
+      process.stdout.write(`\r  ${spin} ${buildStatus}... (${elapsed}s)  `);
+      await sleep(5000);
+    }
+
+    return buildStatus === "SUCCESS";
   } catch {
     return null;
   }

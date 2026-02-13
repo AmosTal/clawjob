@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { getUser, updateUser } from "@/lib/db";
+import { getUser, updateUser, createOrUpdateUser } from "@/lib/db";
+
+export async function POST(request: Request) {
+  const user = await verifyAuth(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    await createOrUpdateUser(user.uid, {
+      email: body.email ?? user.email,
+      name: body.displayName ?? body.name ?? "",
+      photoURL: body.photoURL,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("POST /api/user error:", err);
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(request: Request) {
   const user = await verifyAuth(request);
