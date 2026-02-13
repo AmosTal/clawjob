@@ -8,15 +8,29 @@ import {
   type PanInfo,
 } from "framer-motion";
 import type { JobCard } from "@/lib/types";
+import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
+import { auth } from "@/lib/firebase-client";
 import ManagerHero from "./ManagerHero";
 import ActionButtons from "./ActionButtons";
 import HRFlipCard from "./HRFlipCard";
+import SwipeOverlay from "./SwipeOverlay";
+import ConfettiPop from "./ConfettiPop";
+import EmptyState from "./EmptyState";
 
 const SWIPE_THRESHOLD = 120;
 
 export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(
+    null
+  );
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [applying, setApplying] = useState(false);
+  const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(
     null
   );
 
@@ -30,11 +44,60 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
     x.set(0);
   }, [x]);
 
+  const applyToJob = useCallback(
+    async (job: JobCard) => {
+      if (appliedIds.has(job.id) || applying) return true; // already applied, just advance
+
+      setApplying(true);
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch("/api/applications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ jobId: job.id }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to apply");
+        }
+
+        setAppliedIds((prev) => new Set(prev).add(job.id));
+        showToast(`Applied to ${job.company}!`, "success");
+
+        // trigger confetti at center of viewport
+        setConfetti({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        });
+
+        return true;
+      } catch {
+        showToast("Failed to apply. Try again.", "error");
+        return false;
+      } finally {
+        setApplying(false);
+      }
+    },
+    [appliedIds, applying, showToast]
+  );
+
   const dismiss = useCallback(
-    (direction: "left" | "right") => {
+    async (direction: "left" | "right") => {
+      if (direction === "right") {
+        const job = jobs[currentIndex];
+        const success = await applyToJob(job);
+        if (!success) {
+          x.set(0);
+          return;
+        }
+      }
       setExitDirection(direction);
     },
-    []
+    [applyToJob, currentIndex, jobs, x]
   );
 
   const handleDragEnd = useCallback(
@@ -52,10 +115,12 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
 
   if (currentIndex >= jobs.length) {
     return (
-      <div className="flex h-[80vh] flex-col items-center justify-center gap-4 text-center">
-        <p className="text-2xl font-bold text-zinc-300">No more jobs!</p>
-        <p className="text-zinc-500">Check back later.</p>
-      </div>
+      <EmptyState
+        onRefresh={() => {
+          setCurrentIndex(0);
+          setAppliedIds(new Set());
+        }}
+      />
     );
   }
 
@@ -87,30 +152,33 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
       </div>
 
       {/* Swipeable card */}
-      <motion.div
-        key={job.id}
-        className="touch-none"
-        style={{ x, rotate, opacity }}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.9}
-        onDragEnd={handleDragEnd}
-        animate={
-          exitDirection
-            ? {
-                x: exitDirection === "right" ? 500 : -500,
-                rotate: exitDirection === "right" ? 20 : -20,
-                opacity: 0,
-              }
-            : {}
-        }
-        transition={exitDirection ? { duration: 0.35, ease: "easeIn" } : {}}
-        onAnimationComplete={() => {
-          if (exitDirection) advance();
-        }}
-      >
-        <ManagerHero manager={job.manager} />
-      </motion.div>
+      <div className="relative">
+        <motion.div
+          key={job.id}
+          className="touch-none"
+          style={{ x, rotate, opacity }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.9}
+          onDragEnd={handleDragEnd}
+          animate={
+            exitDirection
+              ? {
+                  x: exitDirection === "right" ? 500 : -500,
+                  rotate: exitDirection === "right" ? 20 : -20,
+                  opacity: 0,
+                }
+              : {}
+          }
+          transition={exitDirection ? { duration: 0.35, ease: "easeIn" } : {}}
+          onAnimationComplete={() => {
+            if (exitDirection) advance();
+          }}
+        >
+          <ManagerHero manager={job.manager} />
+          <SwipeOverlay x={x} />
+        </motion.div>
+      </div>
 
       {/* Action buttons */}
       <ActionButtons
@@ -120,6 +188,15 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
 
       {/* HR Flip Card */}
       <HRFlipCard hr={job.hr} />
+
+      {/* Confetti */}
+      {confetti && (
+        <ConfettiPop
+          x={confetti.x}
+          y={confetti.y}
+          onComplete={() => setConfetti(null)}
+        />
+      )}
     </div>
   );
 }

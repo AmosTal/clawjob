@@ -21,6 +21,24 @@ export const sampleJobs: JobCard[] = [
       phone: "+1 (415) 555-0142",
     },
     tags: ["React", "TypeScript", "Remote-Friendly", "Series B"],
+    description:
+      "Lead the frontend architecture for our developer tools platform used by thousands of engineering teams. You will own critical UI systems and mentor a growing team of frontend engineers.",
+    requirements: [
+      "5+ years of React and TypeScript experience",
+      "Strong understanding of web performance optimization",
+      "Experience building design systems or component libraries",
+      "Familiarity with CI/CD pipelines and testing frameworks",
+      "Excellent communication and mentorship skills",
+    ],
+    benefits: [
+      "Unlimited PTO",
+      "Remote-first culture",
+      "$5k annual learning budget",
+      "Equity package with 4-year vesting",
+      "Top-tier health, dental, and vision",
+    ],
+    teamSize: "14 engineers",
+    culture: ["Fast-paced", "Collaborative", "Flat hierarchy", "Ship weekly"],
   },
   {
     id: "2",
@@ -43,6 +61,24 @@ export const sampleJobs: JobCard[] = [
       phone: "+1 (512) 555-0198",
     },
     tags: ["Node.js", "React", "Healthcare", "Hybrid"],
+    description:
+      "Build full-stack features that power digital health experiences for millions of patients. Work across the stack from React frontends to Node.js microservices and cloud infrastructure.",
+    requirements: [
+      "3+ years full-stack development with React and Node.js",
+      "Experience with RESTful APIs and GraphQL",
+      "Understanding of HIPAA compliance and healthcare data",
+      "Proficiency with SQL and NoSQL databases",
+      "Passion for improving healthcare through technology",
+    ],
+    benefits: [
+      "Hybrid work schedule (3 days in-office)",
+      "Comprehensive health benefits from day one",
+      "401(k) with 6% company match",
+      "Quarterly wellness stipend",
+      "Paid parental leave (16 weeks)",
+    ],
+    teamSize: "9 engineers",
+    culture: ["Mission-driven", "Empathetic", "Data-informed", "Transparent"],
   },
   {
     id: "3",
@@ -63,6 +99,24 @@ export const sampleJobs: JobCard[] = [
       email: "emily.v@cobaltrobotics.ai",
     },
     tags: ["Python", "Kubernetes", "ML/AI", "On-Site"],
+    description:
+      "Design and scale the ML platform that powers our autonomous security robots deployed across Fortune 500 campuses. You will build the infrastructure that trains, serves, and monitors production models.",
+    requirements: [
+      "4+ years in ML infrastructure or platform engineering",
+      "Deep expertise with Python, Kubernetes, and Docker",
+      "Experience with ML frameworks like PyTorch or TensorFlow",
+      "Strong background in distributed systems and data pipelines",
+      "Familiarity with MLOps tools such as MLflow or Kubeflow",
+    ],
+    benefits: [
+      "Competitive equity in a pre-IPO company",
+      "Relocation assistance to Boston",
+      "Free on-site meals and snacks",
+      "Annual conference travel budget",
+      "Premium health and dental coverage",
+    ],
+    teamSize: "18 engineers",
+    culture: ["Research-driven", "Ambitious", "Deep work", "Intellectual curiosity"],
   },
   {
     id: "4",
@@ -85,6 +139,24 @@ export const sampleJobs: JobCard[] = [
       phone: "+1 (212) 555-0167",
     },
     tags: ["Go", "PostgreSQL", "Fintech", "On-Site"],
+    description:
+      "Build the high-throughput payment processing engine handling millions of daily transactions. You will work on low-latency Go services, real-time event streaming, and bulletproof financial data pipelines.",
+    requirements: [
+      "4+ years backend development with Go or similar systems languages",
+      "Strong experience with PostgreSQL and database optimization",
+      "Knowledge of event-driven architectures and message queues",
+      "Understanding of financial regulations and PCI compliance",
+      "Experience with observability tools like Datadog or Grafana",
+    ],
+    benefits: [
+      "Top-of-market compensation",
+      "Annual performance bonuses",
+      "Commuter benefits and gym membership",
+      "Generous stock option grants",
+      "Catered lunches Monday through Friday",
+    ],
+    teamSize: "22 engineers",
+    culture: ["High-performance", "Reliability-first", "Ownership mentality", "Rigorous code review"],
   },
   {
     id: "5",
@@ -106,5 +178,23 @@ export const sampleJobs: JobCard[] = [
       phone: "+1 (323) 555-0134",
     },
     tags: ["Three.js", "GSAP", "WebGL", "Remote"],
+    description:
+      "Blend art and engineering to create immersive web experiences for top-tier brands. You will prototype interactive installations, build WebGL experiences, and push the boundaries of what the browser can do.",
+    requirements: [
+      "3+ years working with Three.js, WebGL, or Canvas APIs",
+      "Strong JavaScript fundamentals and creative coding skills",
+      "Portfolio demonstrating interactive or generative art projects",
+      "Experience with animation libraries like GSAP or Framer Motion",
+      "Eye for design and comfort collaborating with creative teams",
+    ],
+    benefits: [
+      "Fully remote with async-first culture",
+      "4-day work week",
+      "$3k home office setup stipend",
+      "Sabbatical after 3 years",
+      "Creative project Fridays",
+    ],
+    teamSize: "7 engineers",
+    culture: ["Creative freedom", "Experimental", "Async-first", "Work-life balance"],
   },
 ];

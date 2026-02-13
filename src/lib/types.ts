@@ -23,4 +23,37 @@ export interface JobCard {
   manager: ManagerAsset;
   hr: HRContact;
   tags: string[];
+  description?: string;
+  requirements?: string[];
+  benefits?: string[];
+  companyLogo?: string;
+  teamSize?: string;
+  culture?: string[];
+}
+
+export interface Application {
+  id: string;
+  userId: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  status:
+    | "applied"
+    | "reviewing"
+    | "interview"
+    | "offer"
+    | "rejected"
+    | "withdrawn";
+  message?: string;
+  appliedAt: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  photoURL?: string;
+  bio?: string;
+  resumeURL?: string;
+  createdAt: string;
 }

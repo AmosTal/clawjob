@@ -2,10 +2,22 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # Build Docker image
+  # Build Docker image with Firebase env vars baked in
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyAqGNcLjx22WzDFCAT0nFLwEL5t-Z2dm0Q'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=clawjob.firebaseapp.com'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=clawjob'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=clawjob.firebasestorage.app'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=451967687816'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_APP_ID=1:451967687816:web:4a451a58d67f332bb5933d'
       - '-t'
       - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
       - '-t'
@@ -42,6 +54,8 @@ steps:
       - '512Mi'
       - '--cpu'
       - '1'
+      - '--set-env-vars'
+      - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=clawjob,ADMIN_EMAILS=amostal10@gmail.com'
 
 images:
   - 'us-central1-docker.pkg.dev/clawjob/clawjob/clawjob:$COMMIT_SHA'
