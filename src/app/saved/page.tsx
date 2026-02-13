@@ -8,7 +8,7 @@ import type { JobCard } from "@/lib/types";
 import SavedJobCard from "@/components/SavedJobCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
-import { ToastProvider, useToast } from "@/components/Toast";
+import { useToast } from "@/components/Toast";
 
 function SavedPageContent() {
   const { user } = useAuth();
@@ -198,9 +198,7 @@ export default function SavedPage() {
 
   return (
     <AppShell>
-      <ToastProvider>
-        <SavedPageContent />
-      </ToastProvider>
+      <SavedPageContent />
     </AppShell>
   );
 }

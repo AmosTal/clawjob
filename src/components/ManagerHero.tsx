@@ -15,14 +15,20 @@ function Initials({ name }: { name: string }) {
   );
 }
 
-export default function ManagerHero({ manager }: { manager: ManagerAsset }) {
+interface ManagerHeroProps {
+  manager: ManagerAsset;
+  onTap?: () => void;
+}
+
+export default function ManagerHero({ manager, onTap }: ManagerHeroProps) {
   return (
     <motion.div
       className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
-      style={{ height: "70vh" }}
+      style={{ height: "70vh", cursor: onTap ? "pointer" : undefined }}
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
+      onClick={onTap}
     >
       {/* Background: video or photo fallback */}
       {manager.video ? (

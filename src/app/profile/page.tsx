@@ -8,6 +8,7 @@ import type { UserProfile, Application } from "@/lib/types";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 interface ProfileStats {
   applied: number;
@@ -28,6 +29,7 @@ const fadeUp = {
 export default function ProfilePage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<ProfileStats>({
     applied: 0,
@@ -107,8 +109,9 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error("Failed to save");
       const data: UserProfile = await res.json();
       setProfile(data);
+      showToast("Profile saved!", "success");
     } catch {
-      // silently fail
+      showToast("Failed to save profile", "error");
     } finally {
       setSaving(false);
     }

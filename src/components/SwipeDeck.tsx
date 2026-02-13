@@ -8,7 +8,6 @@ import {
   type PanInfo,
 } from "framer-motion";
 import type { JobCard } from "@/lib/types";
-import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/Toast";
 import { auth } from "@/lib/firebase-client";
 import ManagerHero from "./ManagerHero";
@@ -17,11 +16,17 @@ import HRFlipCard from "./HRFlipCard";
 import SwipeOverlay from "./SwipeOverlay";
 import ConfettiPop from "./ConfettiPop";
 import EmptyState from "./EmptyState";
+import SkeletonCard from "./SkeletonCard";
+import JobDetailSheet from "./JobDetailSheet";
 
 const SWIPE_THRESHOLD = 120;
 
-export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
-  const { user } = useAuth();
+interface SwipeDeckProps {
+  jobs: JobCard[];
+  loading?: boolean;
+}
+
+export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
   const { showToast } = useToast();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -30,9 +35,11 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
   );
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [applying, setApplying] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(
     null
   );
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
@@ -46,7 +53,7 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
 
   const applyToJob = useCallback(
     async (job: JobCard) => {
-      if (appliedIds.has(job.id) || applying) return true; // already applied, just advance
+      if (appliedIds.has(job.id) || applying) return true;
 
       setApplying(true);
       try {
@@ -68,7 +75,6 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
         setAppliedIds((prev) => new Set(prev).add(job.id));
         showToast(`Applied to ${job.company}!`, "success");
 
-        // trigger confetti at center of viewport
         setConfetti({
           x: window.innerWidth / 2,
           y: window.innerHeight / 2,
@@ -83,6 +89,38 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
       }
     },
     [appliedIds, applying, showToast]
+  );
+
+  const saveJob = useCallback(
+    async (job: JobCard) => {
+      if (saving) return;
+
+      setSaving(true);
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch("/api/saved", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ jobId: job.id }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to save");
+        }
+
+        showToast(`Saved ${job.role}`, "info");
+        setExitDirection("left");
+      } catch {
+        showToast("Failed to save. Try again.", "error");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [saving, showToast]
   );
 
   const dismiss = useCallback(
@@ -112,6 +150,10 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
     },
     [dismiss, x]
   );
+
+  if (loading) {
+    return <SkeletonCard />;
+  }
 
   if (currentIndex >= jobs.length) {
     return (
@@ -175,7 +217,10 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
             if (exitDirection) advance();
           }}
         >
-          <ManagerHero manager={job.manager} />
+          <ManagerHero
+            manager={job.manager}
+            onTap={() => setDetailOpen(true)}
+          />
           <SwipeOverlay x={x} />
         </motion.div>
       </div>
@@ -183,11 +228,19 @@ export default function SwipeDeck({ jobs }: { jobs: JobCard[] }) {
       {/* Action buttons */}
       <ActionButtons
         onSkip={() => dismiss("left")}
+        onSave={() => saveJob(job)}
         onApply={() => dismiss("right")}
       />
 
       {/* HR Flip Card */}
       <HRFlipCard hr={job.hr} />
+
+      {/* Job Detail Sheet */}
+      <JobDetailSheet
+        job={job}
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
 
       {/* Confetti */}
       {confetti && (

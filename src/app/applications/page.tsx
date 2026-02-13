@@ -8,9 +8,11 @@ import type { Application } from "@/lib/types";
 import ApplicationCard from "@/components/ApplicationCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
+import { useToast } from "@/components/Toast";
 
 export default function ApplicationsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,11 +31,11 @@ export default function ApplicationsPage() {
       );
       setApplications(data);
     } catch {
-      // silently fail — empty list shown
+      showToast("Failed to load applications", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     if (user) fetchApplications();

@@ -4,12 +4,17 @@ import { motion } from "framer-motion";
 
 interface ActionButtonsProps {
   onSkip: () => void;
+  onSave: () => void;
   onApply: () => void;
 }
 
-export default function ActionButtons({ onSkip, onApply }: ActionButtonsProps) {
+export default function ActionButtons({
+  onSkip,
+  onSave,
+  onApply,
+}: ActionButtonsProps) {
   return (
-    <div className="flex items-center justify-center gap-8 py-4">
+    <div className="flex items-center justify-center gap-6 py-4">
       {/* Skip button */}
       <motion.button
         className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-500/40 bg-red-500/10 text-red-400 shadow-lg transition-colors hover:bg-red-500/20"
@@ -29,6 +34,27 @@ export default function ActionButtons({ onSkip, onApply }: ActionButtonsProps) {
         >
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </motion.button>
+
+      {/* Save/bookmark button */}
+      <motion.button
+        className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg transition-colors hover:bg-amber-500/20"
+        whileTap={{ scale: 0.9 }}
+        onClick={onSave}
+        aria-label="Save"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
         </svg>
       </motion.button>
 
