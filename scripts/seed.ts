@@ -1,15 +1,35 @@
-import { initializeApp, applicationDefault, getApps } from "firebase-admin/app";
+import { initializeApp, getApps, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { sampleJobs } from "../src/lib/data";
 
+// Load .env.local manually (no dotenv dependency)
+try {
+  const envPath = resolve(__dirname, "..", ".env.local");
+  const envContent = readFileSync(envPath, "utf-8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (!process.env[key]) process.env[key] = value;
+  }
+} catch { /* .env.local not found */ }
+
 if (getApps().length === 0) {
-  initializeApp({
-    credential: applicationDefault(),
-    projectId: "clawjob",
-  });
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  initializeApp(
+    serviceAccountKey
+      ? { credential: cert(JSON.parse(serviceAccountKey) as ServiceAccount) }
+      : { projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "clawjob" }
+  );
 }
 
 const db = getFirestore();
+db.settings({ ignoreUndefinedProperties: true });
 
 async function clearCollection(collectionPath: string) {
   const snapshot = await db.collection(collectionPath).get();

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import type { ManagerAsset } from "@/lib/types";
 
 function Initials({ name }: { name: string }) {
-  const initials = name
+  const initials = (name || "HM")
     .split(" ")
     .map((w) => w[0])
     .join("");
@@ -81,11 +81,13 @@ export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHero
 
       {/* Text overlay */}
       <div className="absolute inset-x-0 bottom-0 p-5">
-        <h2 className="text-2xl font-bold text-white">{manager.name}</h2>
-        <p className="text-sm font-medium text-zinc-300">{manager.title}</p>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-400 italic">
-          &ldquo;{manager.tagline}&rdquo;
-        </p>
+        <h2 className="text-2xl font-bold text-white">{manager.name || "Hiring Manager"}</h2>
+        <p className="text-sm font-medium text-zinc-300">{manager.title || "Manager"}</p>
+        {manager.tagline && (
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400 italic">
+            &ldquo;{manager.tagline}&rdquo;
+          </p>
+        )}
       </div>
     </motion.div>
   );

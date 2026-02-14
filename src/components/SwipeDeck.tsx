@@ -168,6 +168,20 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
 
   const job = jobs[currentIndex];
 
+  const manager = job.manager ?? {
+    name: "Hiring Manager",
+    title: `Manager at ${job.company}`,
+    tagline: `Join us at ${job.company}`,
+    photo: `https://ui-avatars.com/api/?name=HM&background=4F46E5&color=fff&size=128`,
+  };
+
+  const hr = job.hr ?? {
+    name: `${job.company} Recruiting`,
+    title: `Talent Acquisition at ${job.company}`,
+    photo: `https://ui-avatars.com/api/?name=HR&background=10B981&color=fff&size=128`,
+    email: `careers@${job.company.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+  };
+
   return (
     <div className="flex flex-col gap-3">
       {/* Job header */}
@@ -193,7 +207,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
           </p>
         )}
         <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-          {job.tags.map((tag) => (
+          {(job.tags ?? []).map((tag) => (
             <span
               key={tag}
               className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs text-zinc-400"
@@ -229,7 +243,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
           }}
         >
           <ManagerHero
-            manager={job.manager}
+            manager={manager}
             companyLogo={job.companyLogo}
             onTap={() => setDetailOpen(true)}
           />
@@ -245,7 +259,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
       />
 
       {/* HR Flip Card */}
-      <HRFlipCard hr={job.hr} companyLogo={job.companyLogo} />
+      <HRFlipCard hr={hr} companyLogo={job.companyLogo} />
 
       {/* Job Detail Sheet */}
       <JobDetailSheet

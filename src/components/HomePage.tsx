@@ -66,7 +66,14 @@ export default function HomePage() {
 
         if (cancelled) return;
 
-        const allJobs: JobCard[] = await jobsRes.json();
+        if (!jobsRes.ok) {
+          console.error("Jobs API returned", jobsRes.status);
+          setLoadingJobs(false);
+          return;
+        }
+
+        const jobsData = await jobsRes.json();
+        const allJobs: JobCard[] = Array.isArray(jobsData) ? jobsData : [];
         const applications: Application[] = appsRes.ok
           ? await appsRes.json()
           : [];

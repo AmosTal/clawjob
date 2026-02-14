@@ -234,30 +234,32 @@ export default function JobDetailSheet({
               )}
 
               {/* Manager card */}
-              <div className="mb-4">
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Hiring Manager
-                </h3>
-                <div className="flex items-center gap-3 rounded-xl bg-zinc-800/60 p-3">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                    style={{ backgroundColor: color }}
-                  >
-                    {job.manager.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      {job.manager.name}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {job.manager.title}
-                    </p>
+              {job.manager && (
+                <div className="mb-4">
+                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                    Hiring Manager
+                  </h3>
+                  <div className="flex items-center gap-3 rounded-xl bg-zinc-800/60 p-3">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {(job.manager.name || "HM")
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {job.manager.name || "Hiring Manager"}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {job.manager.title || "Manager"}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         </>

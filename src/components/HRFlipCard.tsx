@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import type { HRContact } from "@/lib/types";
 
 function Initials({ name }: { name: string }) {
-  const initials = name
+  const initials = (name || "HR")
     .split(" ")
     .map((w) => w[0])
     .join("");
@@ -74,8 +74,8 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
             </div>
           </div>
           <div className="min-w-0">
-            <p className="text-base font-semibold text-white">{hr.name}</p>
-            <p className="text-sm text-zinc-400">{hr.title}</p>
+            <p className="text-base font-semibold text-white">{hr.name || "Recruiter"}</p>
+            <p className="text-sm text-zinc-400">{hr.title || "Talent Acquisition"}</p>
             <p className="mt-1 text-xs text-zinc-600">Tap to see contact info</p>
           </div>
         </div>
@@ -85,7 +85,9 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
           className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-5"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          <p className="text-sm text-zinc-400">{hr.email}</p>
+          {hr.email && (
+            <p className="text-sm text-zinc-400">{hr.email}</p>
+          )}
           {hr.phone && (
             <p className="text-sm text-zinc-400">{hr.phone}</p>
           )}
