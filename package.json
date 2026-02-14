@@ -1,6 +1,6 @@
 {
   "name": "clawjob",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
+    "scrape": "tsx scripts/scrape-jobs.ts",
     "deploy": "tsx scripts/deploy.ts"
   },
   "dependencies": {

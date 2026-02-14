@@ -16,8 +16,15 @@ function Initials({ name }: { name: string }) {
   );
 }
 
-export default function HRFlipCard({ hr }: { hr: HRContact }) {
+interface HRFlipCardProps {
+  hr: HRContact;
+  companyLogo?: string;
+}
+
+export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
   const [flipped, setFlipped] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   return (
     <div
@@ -38,16 +45,32 @@ export default function HRFlipCard({ hr }: { hr: HRContact }) {
         >
           <div className="shrink-0">
             <div className="relative h-14 w-14 overflow-hidden rounded-full">
+              {/* Layer 1: Initials (always behind) */}
               <Initials name={hr.name} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={hr.photo}
-                alt={hr.name}
-                className="absolute inset-0 h-full w-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
+
+              {/* Layer 2: Company logo fallback */}
+              {photoFailed && companyLogo && !logoFailed && (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-700 rounded-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={companyLogo}
+                    alt={`${hr.name} - company logo`}
+                    className="h-8 w-8 rounded-sm object-contain"
+                    onError={() => setLogoFailed(true)}
+                  />
+                </div>
+              )}
+
+              {/* Layer 3: HR photo (on top) */}
+              {!photoFailed && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={hr.photo}
+                  alt={hr.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={() => setPhotoFailed(true)}
+                />
+              )}
             </div>
           </div>
           <div className="min-w-0">

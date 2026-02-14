@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import RoleSelectScreen from "@/components/RoleSelectScreen";
 import SwipeDeck from "@/components/SwipeDeck";
@@ -9,10 +10,37 @@ import AppShell from "@/components/AppShell";
 import { auth } from "@/lib/firebase-client";
 import type { JobCard, Application } from "@/lib/types";
 
+function HomeSkeleton() {
+  return (
+    <div className="flex flex-col items-center gap-4 px-4 py-6">
+      {/* Header skeleton */}
+      <div className="h-6 w-28 animate-pulse rounded bg-zinc-800" />
+      {/* Progress counter skeleton */}
+      <div className="h-4 w-20 animate-pulse rounded-full bg-zinc-800" />
+      {/* Title area */}
+      <div className="space-y-2 text-center">
+        <div className="mx-auto h-5 w-40 animate-pulse rounded bg-zinc-800" />
+        <div className="mx-auto h-4 w-32 animate-pulse rounded bg-zinc-800" />
+      </div>
+      {/* Card skeleton */}
+      <div className="h-[60vh] w-full animate-pulse rounded-2xl bg-zinc-800" />
+      {/* Action buttons */}
+      <div className="flex items-center gap-6">
+        <div className="h-14 w-14 animate-pulse rounded-full bg-zinc-800" />
+        <div className="h-11 w-11 animate-pulse rounded-full bg-zinc-800" />
+        <div className="h-14 w-14 animate-pulse rounded-full bg-zinc-800" />
+      </div>
+      {/* HR card skeleton */}
+      <div className="h-28 w-full animate-pulse rounded-xl bg-zinc-800" />
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user, role } = useAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<JobCard[]>([]);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
   useEffect(() => {
@@ -46,6 +74,7 @@ export default function HomePage() {
         const appliedIds = new Set(applications.map((a) => a.jobId));
         const filtered = allJobs.filter((j) => !appliedIds.has(j.id));
 
+        setTotalJobs(allJobs.length);
         setJobs(filtered);
       } catch (err) {
         console.error("Failed to load jobs:", err);
@@ -81,7 +110,24 @@ export default function HomePage() {
             claw<span className="text-emerald-400">job</span>
           </h1>
 
-          <SwipeDeck jobs={jobs} loading={loadingJobs} />
+          {/* Progress counter */}
+          {!loadingJobs && jobs.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-3 flex justify-center"
+            >
+              <span className="rounded-full bg-zinc-800/80 px-3 py-1 text-[11px] font-medium text-zinc-400">
+                {jobs.length} of {totalJobs} jobs remaining
+              </span>
+            </motion.div>
+          )}
+
+          {loadingJobs ? (
+            <HomeSkeleton />
+          ) : (
+            <SwipeDeck jobs={jobs} loading={false} />
+          )}
         </div>
       </div>
     </AppShell>

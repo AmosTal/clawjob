@@ -1,9 +1,11 @@
 import type { JobCard } from "./types";
+import { COMPANY_LOGOS } from "./constants";
 
 export const sampleJobs: JobCard[] = [
   {
     id: "1",
     company: "Stripe",
+    companyLogo: COMPANY_LOGOS["Stripe"],
     role: "Backend Engineer, Core Technology",
     location: "Hybrid — South San Francisco, CA",
     salary: "$155,700 - $285,600",
@@ -42,6 +44,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "2",
     company: "Stripe",
+    companyLogo: COMPANY_LOGOS["Stripe"],
     role: "Senior Staff Software Engineer, Developer Infrastructure",
     location: "South San Francisco, CA (On-site)",
     salary: "$271,200 - $406,800",
@@ -80,6 +83,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "3",
     company: "Stripe",
+    companyLogo: COMPANY_LOGOS["Stripe"],
     role: "Software Engineer, New Grad",
     location: "South San Francisco or Seattle",
     salary: "$122,100 - $134,400",
@@ -117,6 +121,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "4",
     company: "Datadog",
+    companyLogo: COMPANY_LOGOS["Datadog"],
     role: "Senior Software Engineer",
     location: "New York, NY or Boston, MA",
     salary: "$130,000 - $300,000",
@@ -155,6 +160,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "5",
     company: "Vercel",
+    companyLogo: COMPANY_LOGOS["Vercel"],
     role: "Software Engineer, CDN",
     location: "Hybrid — New York or San Francisco",
     salary: "$196,000 - $294,000",
@@ -193,6 +199,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "6",
     company: "Plaid",
+    companyLogo: COMPANY_LOGOS["Plaid"],
     role: "Software Engineer, Platform",
     location: "New York, NY",
     salary: "$163,200 - $223,200",
@@ -231,6 +238,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "7",
     company: "Plaid",
+    companyLogo: COMPANY_LOGOS["Plaid"],
     role: "Senior Software Engineer, Fullstack",
     location: "New York, NY",
     salary: "$180,000 - $270,000",
@@ -269,6 +277,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "8",
     company: "Google",
+    companyLogo: COMPANY_LOGOS["Google"],
     role: "Software Engineer, L4",
     location: "Mountain View, CA (On-site)",
     salary: "$161,000 - $239,000",
@@ -306,6 +315,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "9",
     company: "Meta",
+    companyLogo: COMPANY_LOGOS["Meta"],
     role: "Software Engineer (E4)",
     location: "Menlo Park, CA (On-site)",
     salary: "$176,000 - $290,000",
@@ -343,6 +353,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "10",
     company: "Amazon",
+    companyLogo: COMPANY_LOGOS["Amazon"],
     role: "Software Development Engineer (SDE II)",
     location: "Seattle, WA",
     salary: "$151,000 - $236,500",
@@ -381,6 +392,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "11",
     company: "Amazon",
+    companyLogo: COMPANY_LOGOS["Amazon"],
     role: "Software Development Engineer, 2026 (New Grad)",
     location: "Seattle, WA or Arlington, VA",
     salary: "$110,500 - $160,000",
@@ -418,6 +430,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "12",
     company: "Apple",
+    companyLogo: COMPANY_LOGOS["Apple"],
     role: "Senior Software Engineer",
     location: "Cupertino, CA (On-site)",
     salary: "$175,800 - $312,200",
@@ -456,6 +469,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "13",
     company: "Netflix",
+    companyLogo: COMPANY_LOGOS["Netflix"],
     role: "Senior Software Engineer",
     location: "Los Gatos, CA or Remote (US)",
     salary: "$300,000 - $500,000",
@@ -494,6 +508,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "14",
     company: "Coinbase",
+    companyLogo: COMPANY_LOGOS["Coinbase"],
     role: "Software Engineer, Backend (Institutional Markets)",
     location: "Remote (US)",
     salary: "$149,500 - $176,000",
@@ -532,6 +547,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "15",
     company: "Coinbase",
+    companyLogo: COMPANY_LOGOS["Coinbase"],
     role: "Software Engineer, Data Platform",
     location: "Remote (US)",
     salary: "$147,900 - $174,000",
@@ -570,6 +586,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "16",
     company: "Discord",
+    companyLogo: COMPANY_LOGOS["Discord"],
     role: "Senior Software Engineer, Frontend",
     location: "San Francisco, CA (Hybrid)",
     salary: "$196,000 - $220,500",
@@ -608,6 +625,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "17",
     company: "Shopify",
+    companyLogo: COMPANY_LOGOS["Shopify"],
     role: "Senior Developer",
     location: "Remote (US / Canada)",
     salary: "$158,000 - $218,000",
@@ -646,6 +664,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "18",
     company: "Uber",
+    companyLogo: COMPANY_LOGOS["Uber"],
     role: "Senior Software Engineer (L5a)",
     location: "San Francisco, CA (Hybrid)",
     salary: "$196,000 - $217,500",
@@ -684,6 +703,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "19",
     company: "OpenAI",
+    companyLogo: COMPANY_LOGOS["OpenAI"],
     role: "Software Engineer",
     location: "San Francisco, CA (On-site)",
     salary: "$245,000 - $385,000",
@@ -722,6 +742,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "20",
     company: "Databricks",
+    companyLogo: COMPANY_LOGOS["Databricks"],
     role: "Staff Software Engineer",
     location: "San Francisco, CA or Remote (US)",
     salary: "$214,000 - $369,000",
@@ -760,6 +781,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "21",
     company: "Ramp",
+    companyLogo: COMPANY_LOGOS["Ramp"],
     role: "Software Engineer",
     location: "New York, NY (Hybrid)",
     salary: "$164,000 - $220,000",
@@ -798,6 +820,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "22",
     company: "Palantir",
+    companyLogo: COMPANY_LOGOS["Palantir"],
     role: "Software Engineer",
     location: "New York, NY or Washington, DC",
     salary: "$135,000 - $205,000",
@@ -836,6 +859,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "23",
     company: "Spotify",
+    companyLogo: COMPANY_LOGOS["Spotify"],
     role: "Backend Engineer",
     location: "New York, NY or Stockholm, Sweden",
     salary: "$140,000 - $205,000",
@@ -874,6 +898,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "24",
     company: "Figma",
+    companyLogo: COMPANY_LOGOS["Figma"],
     role: "Software Engineer",
     location: "San Francisco, CA (Hybrid)",
     salary: "$149,000 - $350,000",
@@ -912,6 +937,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "25",
     company: "LinkedIn",
+    companyLogo: COMPANY_LOGOS["LinkedIn"],
     role: "Software Engineer",
     location: "Sunnyvale, CA (Hybrid)",
     salary: "$128,000 - $212,000",
@@ -950,6 +976,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "26",
     company: "Airbnb",
+    companyLogo: COMPANY_LOGOS["Airbnb"],
     role: "Software Engineer, Backend",
     location: "San Francisco, CA (Hybrid)",
     salary: "$185,000 - $265,000",
@@ -988,6 +1015,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "27",
     company: "Cloudflare",
+    companyLogo: COMPANY_LOGOS["Cloudflare"],
     role: "Systems Engineer",
     location: "Austin, TX or San Francisco, CA",
     salary: "$140,000 - $204,000",
@@ -1026,6 +1054,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "28",
     company: "Notion",
+    companyLogo: COMPANY_LOGOS["Notion"],
     role: "Software Engineer",
     location: "San Francisco, CA or New York, NY",
     salary: "$170,000 - $270,000",
@@ -1064,6 +1093,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "29",
     company: "Block (Square)",
+    companyLogo: COMPANY_LOGOS["Block (Square)"],
     role: "Senior Software Engineer",
     location: "San Francisco, CA or Remote (US)",
     salary: "$198,000 - $297,000",
@@ -1102,6 +1132,7 @@ export const sampleJobs: JobCard[] = [
   {
     id: "30",
     company: "Anthropic",
+    companyLogo: COMPANY_LOGOS["Anthropic"],
     role: "Software Engineer",
     location: "San Francisco, CA (Hybrid)",
     salary: "$250,000 - $375,000",

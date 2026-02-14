@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { ManagerAsset } from "@/lib/types";
 
@@ -17,10 +18,14 @@ function Initials({ name }: { name: string }) {
 
 interface ManagerHeroProps {
   manager: ManagerAsset;
+  companyLogo?: string;
   onTap?: () => void;
 }
 
-export default function ManagerHero({ manager, onTap }: ManagerHeroProps) {
+export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHeroProps) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <motion.div
       className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
@@ -42,16 +47,32 @@ export default function ManagerHero({ manager, onTap }: ManagerHeroProps) {
         />
       ) : (
         <>
+          {/* Layer 1: Initials (always rendered behind) */}
           <Initials name={manager.name} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={manager.photo}
-            alt={manager.name}
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
+
+          {/* Layer 2: Company logo fallback (shown when photo fails) */}
+          {photoFailed && companyLogo && !logoFailed && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-800">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={companyLogo}
+                alt={`${manager.name} - company logo`}
+                className="h-32 w-32 rounded-2xl object-contain"
+                onError={() => setLogoFailed(true)}
+              />
+            </div>
+          )}
+
+          {/* Layer 3: Manager photo (on top) */}
+          {!photoFailed && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={manager.photo}
+              alt={manager.name}
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={() => setPhotoFailed(true)}
+            />
+          )}
         </>
       )}
 

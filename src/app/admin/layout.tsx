@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -16,14 +17,14 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      setAdminCheck("denied");
-      return;
-    }
 
     async function verify() {
+      if (!user) {
+        setAdminCheck("denied");
+        return;
+      }
       try {
-        const token = await user!.getIdToken();
+        const token = await user.getIdToken();
         const res = await fetch("/api/admin/stats", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -59,12 +60,12 @@ export default function AdminLayout({
             You don&apos;t have permission to access the admin dashboard.
             Contact an administrator for access.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block mt-4 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-sm font-medium transition-colors"
           >
             Go Home
-          </a>
+          </Link>
         </div>
       </div>
     );

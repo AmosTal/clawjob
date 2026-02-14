@@ -57,6 +57,7 @@ export interface UserProfile {
   photoURL?: string;
   bio?: string;
   resumeURL?: string;
+  resumeFileName?: string;
   role?: "seeker" | "employer";
   createdAt: string;
 }

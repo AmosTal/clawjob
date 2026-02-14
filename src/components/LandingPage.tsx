@@ -122,11 +122,9 @@ export default function LandingPage() {
           <motion.h1
             variants={fadeUp}
             transition={{ duration: 0.6 }}
-            className="mt-6 text-5xl font-black tracking-tight sm:text-7xl"
+            className="mt-6 text-5xl font-black tracking-tight sm:text-7xl text-white"
           >
-            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-teal-400 bg-clip-text text-transparent">
-              {APP_NAME}
-            </span>
+            claw<span className="text-emerald-400">job</span>
           </motion.h1>
 
           <motion.p

@@ -173,7 +173,18 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
       {/* Job header */}
       <div className="px-1 text-center">
         <p className="text-lg font-bold text-white">{job.role}</p>
-        <p className="text-sm text-zinc-400">
+        <p className="flex items-center justify-center gap-1.5 text-sm text-zinc-400">
+          {job.companyLogo && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={job.companyLogo}
+              alt={job.company}
+              className="inline-block h-4 w-4 rounded-sm object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          )}
           {job.company} &middot; {job.location}
         </p>
         {job.salary && (
@@ -219,6 +230,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
         >
           <ManagerHero
             manager={job.manager}
+            companyLogo={job.companyLogo}
             onTap={() => setDetailOpen(true)}
           />
           <SwipeOverlay x={x} />
@@ -233,7 +245,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
       />
 
       {/* HR Flip Card */}
-      <HRFlipCard hr={job.hr} />
+      <HRFlipCard hr={job.hr} companyLogo={job.companyLogo} />
 
       {/* Job Detail Sheet */}
       <JobDetailSheet

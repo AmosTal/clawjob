@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
-import { auth } from "@/lib/firebase-client";
+import { auth, storage } from "@/lib/firebase-client";
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import type { UserProfile, Application } from "@/lib/types";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -20,6 +26,13 @@ const stagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
 };
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -43,6 +56,9 @@ export default function ProfilePage() {
   const [editBio, setEditBio] = useState("");
   const [editResume, setEditResume] = useState("");
   const [editingName, setEditingName] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -82,6 +98,104 @@ export default function ProfilePage() {
       // silently fail
     }
   }, [getToken]);
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      if (!user) return;
+
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        showToast("Please upload a PDF, DOC, or DOCX file", "error");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        showToast("File must be under 5MB", "error");
+        return;
+      }
+
+      const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      setUploadProgress(0);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const pct = Math.round(
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          );
+          setUploadProgress(pct);
+        },
+        (error) => {
+          console.error("Upload error:", error);
+          setUploadProgress(null);
+          showToast("Upload failed. Please try again.", "error");
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            const token = await getToken();
+            const res = await fetch("/api/user", {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                resumeURL: downloadURL,
+                resumeFileName: file.name,
+              }),
+            });
+            if (!res.ok) throw new Error("Failed to save");
+            const data: UserProfile = await res.json();
+            setProfile(data);
+            setEditResume(downloadURL);
+            showToast("Resume uploaded!", "success");
+          } catch {
+            showToast("Failed to save resume info", "error");
+          } finally {
+            setUploadProgress(null);
+          }
+        }
+      );
+    },
+    [user, getToken, showToast]
+  );
+
+  const handleRemoveResume = useCallback(async () => {
+    if (!user || !profile) return;
+
+    try {
+      // If there's a file in storage, try to delete it
+      if (profile.resumeFileName) {
+        const storageRef = ref(
+          storage,
+          `resumes/${user.uid}/${profile.resumeFileName}`
+        );
+        try {
+          await deleteObject(storageRef);
+        } catch {
+          // File may not exist in storage — ignore
+        }
+      }
+
+      const token = await getToken();
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ resumeURL: "", resumeFileName: "" }),
+      });
+      if (!res.ok) throw new Error("Failed to remove");
+      const data: UserProfile = await res.json();
+      setProfile(data);
+      setEditResume("");
+      showToast("Resume removed", "success");
+    } catch {
+      showToast("Failed to remove resume", "error");
+    }
+  }, [user, profile, getToken, showToast]);
 
   useEffect(() => {
     if (user) {
@@ -286,17 +400,131 @@ export default function ProfilePage() {
                 />
               </motion.div>
 
-              {/* Resume URL */}
-              <motion.div className="flex flex-col gap-1.5" variants={fadeUp}>
+              {/* Resume Upload */}
+              <motion.div className="flex flex-col gap-2" variants={fadeUp}>
                 <label className="text-xs font-medium text-zinc-400">
-                  Resume URL
+                  Resume / CV
                 </label>
-                <input
-                  value={editResume}
-                  onChange={(e) => setEditResume(e.target.value)}
-                  placeholder="Link to your resume"
-                  className="rounded-xl border border-zinc-800 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
-                />
+
+                {/* Show uploaded file info */}
+                {profile?.resumeFileName && profile?.resumeURL ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3">
+                    <svg
+                      className="h-8 w-8 shrink-0 text-emerald-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium text-white">
+                        {profile.resumeFileName}
+                      </span>
+                      <div className="mt-1 flex gap-3">
+                        <a
+                          href={profile.resumeURL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                        >
+                          View
+                        </a>
+                        <button
+                          onClick={handleRemoveResume}
+                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Drop zone / file picker */
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragging(true);
+                    }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragging(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 transition-colors ${
+                      dragging
+                        ? "border-emerald-500 bg-emerald-500/10"
+                        : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
+                    }`}
+                  >
+                    <svg
+                      className={`h-8 w-8 ${dragging ? "text-emerald-400" : "text-zinc-500"}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span className="text-sm text-zinc-400">
+                      Drop your resume here or{" "}
+                      <span className="font-medium text-emerald-400">browse</span>
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      PDF, DOC, DOCX up to 5MB
+                    </span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Upload progress bar */}
+                {uploadProgress !== null && (
+                  <div className="overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+
+                {/* Or paste a link */}
+                {!profile?.resumeFileName && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-center text-xs text-zinc-500">
+                      Or paste a link
+                    </span>
+                    <input
+                      value={editResume}
+                      onChange={(e) => setEditResume(e.target.value)}
+                      placeholder="https://example.com/my-resume.pdf"
+                      className="rounded-xl border border-zinc-800 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                )}
               </motion.div>
 
               {/* Save Button */}
