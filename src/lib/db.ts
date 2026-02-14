@@ -367,9 +367,21 @@ export async function deleteCVVersion(
   if (fileUrl) {
     try {
       const bucket = adminStorage.bucket();
-      const prefix = `https://storage.googleapis.com/${bucket.name}/`;
-      if (fileUrl.startsWith(prefix)) {
-        const storagePath = fileUrl.slice(prefix.length);
+      let storagePath: string | null = null;
+
+      // Handle Firebase download URL format
+      const fbMatch = fileUrl.match(/\/o\/(.+?)(\?|$)/);
+      if (fbMatch) {
+        storagePath = decodeURIComponent(fbMatch[1]);
+      } else {
+        // Handle legacy public URL format
+        const prefix = `https://storage.googleapis.com/${bucket.name}/`;
+        if (fileUrl.startsWith(prefix)) {
+          storagePath = fileUrl.slice(prefix.length);
+        }
+      }
+
+      if (storagePath) {
         await bucket.file(storagePath).delete();
       }
     } catch {

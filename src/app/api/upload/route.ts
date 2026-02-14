@@ -58,11 +58,9 @@ export async function POST(request: Request) {
       },
     });
 
-    // Make file publicly accessible
-    await fileRef.makePublic();
-
-    // Build public URL
-    const url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    // Build Firebase Storage download URL (works without makePublic/IAM changes)
+    const encodedPath = encodeURIComponent(storagePath);
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media`;
 
     return NextResponse.json({ url, fileName: file.name });
   } catch (err) {
