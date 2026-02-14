@@ -153,63 +153,43 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        // Show indeterminate progress (pulse between 10-90)
-        setUploadProgress(30);
-
-        const res = await fetch("/api/upload", {
+        const uploadRes = await fetch("/api/upload", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
           body: formData,
+          headers: { Authorization: `Bearer ${token}` },
           signal: abortController.signal,
         });
 
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Upload failed" }));
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
           throw new Error(err.error || "Upload failed");
         }
 
-        setUploadProgress(80);
-
-        const { url: downloadURL, fileName } = await res.json();
-
-        // Derive CV name from filename (strip extension)
+        const { url, fileName } = await uploadRes.json();
         const name = file.name.replace(/\.[^.]+$/, "");
+
+        // Save metadata to API
         const cvRes = await fetch("/api/user/cvs", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ name, fileName, url: downloadURL }),
+          body: JSON.stringify({ name, fileName, url }),
         });
-        if (!cvRes.ok) throw new Error("Failed to save CV record");
 
-        // Also update legacy resumeURL for backward compat
-        await fetch("/api/user", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            resumeURL: downloadURL,
-            resumeFileName: fileName,
-          }),
-        });
+        if (!cvRes.ok) throw new Error("Failed to save CV record");
 
         setUploadProgress(100);
         await fetchCVVersions();
         showToast("CV uploaded!", "success");
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          // User cancelled — already handled
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Cancelled by user — already handled in handleCancelUpload
           return;
         }
         console.error("Upload error:", error);
-        showToast(
-          error instanceof Error ? error.message : "Upload failed. Please try again.",
-          "error"
-        );
+        showToast("Upload failed.", "error");
       } finally {
         resetUploadState();
       }
@@ -500,23 +480,20 @@ export default function ProfilePage() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className={`flex flex-1 flex-col items-center rounded-xl border py-3 transition-colors ${
-                      stat.accent
-                        ? "border-emerald-800/50 bg-emerald-500/5"
-                        : "border-zinc-800 bg-zinc-900"
-                    }`}
+                    className={`flex flex-1 flex-col items-center rounded-xl border py-3 transition-colors ${stat.accent
+                      ? "border-emerald-800/50 bg-emerald-500/5"
+                      : "border-zinc-800 bg-zinc-900"
+                      }`}
                   >
                     <span
-                      className={`text-xl font-bold ${
-                        stat.accent ? "text-emerald-400" : "text-white"
-                      }`}
+                      className={`text-xl font-bold ${stat.accent ? "text-emerald-400" : "text-white"
+                        }`}
                     >
                       {stat.value}
                     </span>
                     <span
-                      className={`text-xs ${
-                        stat.accent ? "text-emerald-400/70" : "text-zinc-400"
-                      }`}
+                      className={`text-xs ${stat.accent ? "text-emerald-400/70" : "text-zinc-400"
+                        }`}
                     >
                       {stat.label}
                     </span>
@@ -563,15 +540,13 @@ export default function ProfilePage() {
                       {cvVersions.map((cv) => (
                         <div
                           key={cv.id}
-                          className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${
-                            cv.isDefault
-                              ? "border-emerald-700/50 bg-emerald-500/5"
-                              : "border-zinc-700/50 bg-zinc-800"
-                          }`}
+                          className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${cv.isDefault
+                            ? "border-emerald-700/50 bg-emerald-500/5"
+                            : "border-zinc-700/50 bg-zinc-800"
+                            }`}
                         >
-                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                            cv.isDefault ? "bg-emerald-500/15" : "bg-zinc-700/50"
-                          }`}>
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${cv.isDefault ? "bg-emerald-500/15" : "bg-zinc-700/50"
+                            }`}>
                             <svg
                               className={`h-4 w-4 ${cv.isDefault ? "text-emerald-400" : "text-zinc-400"}`}
                               viewBox="0 0 24 24"
@@ -695,11 +670,10 @@ export default function ProfilePage() {
                       if (file) handleFileUpload(file);
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 transition-colors ${
-                      dragging
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
-                    }`}
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 transition-colors ${dragging
+                      ? "border-emerald-500 bg-emerald-500/10"
+                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
+                      }`}
                   >
                     <svg
                       className={`h-7 w-7 ${dragging ? "text-emerald-400" : "text-zinc-500"}`}
@@ -719,7 +693,7 @@ export default function ProfilePage() {
                       <span className="font-medium text-emerald-400">browse</span>
                     </span>
                     <span className="text-xs text-zinc-500">
-                      PDF, DOC, DOCX up to 5MB
+                      PDF, DOC, or DOCX up to 5MB
                     </span>
                     <input
                       ref={fileInputRef}
@@ -810,9 +784,8 @@ export default function ProfilePage() {
                           showToast("Failed to update setting", "error");
                         }
                       }}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                        dangerousMode ? "bg-red-500" : "bg-zinc-600"
-                      }`}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${dangerousMode ? "bg-red-500" : "bg-zinc-600"
+                        }`}
                       role="switch"
                       aria-checked={dangerousMode}
                     >

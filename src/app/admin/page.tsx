@@ -12,14 +12,6 @@ interface Stats {
   activeEmployers: number;
 }
 
-interface RecentApp {
-  id: string;
-  jobTitle: string;
-  company: string;
-  status: string;
-  appliedAt: string;
-}
-
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
@@ -32,7 +24,6 @@ const fadeUp = {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,18 +34,10 @@ export default function AdminDashboard() {
         const token = await user!.getIdToken();
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [statsRes, appsRes] = await Promise.all([
-          fetch("/api/admin/stats", { headers }),
-          fetch("/api/admin/stats/recent", { headers }).catch(() => null),
-        ]);
+        const statsRes = await fetch("/api/admin/stats", { headers });
 
         if (statsRes.ok) {
           setStats(await statsRes.json());
-        }
-
-        if (appsRes?.ok) {
-          const data = await appsRes.json();
-          setRecentApps(data.applications ?? []);
         }
       } catch {
         // Silently handle errors
@@ -242,49 +225,6 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* Recent Activity */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-xl p-6"
-      >
-        <h2 className="text-sm font-semibold text-zinc-300 mb-4">
-          Recent Applications
-        </h2>
-        {recentApps.length > 0 ? (
-          <div className="space-y-3">
-            {recentApps.map((app) => (
-              <div
-                key={app.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-800"
-              >
-                <div>
-                  <p className="text-sm font-medium text-zinc-200">
-                    {app.jobTitle}
-                  </p>
-                  <p className="text-xs text-zinc-500">{app.company}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 font-medium">
-                    {app.status}
-                  </span>
-                  <p className="text-[10px] text-zinc-600 mt-1">
-                    {new Date(app.appliedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-zinc-500 text-sm">No recent applications</p>
-            <p className="text-zinc-600 text-xs mt-1">
-              Applications will appear here as they come in
-            </p>
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }

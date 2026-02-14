@@ -112,23 +112,19 @@ export default function CVPreviewModal({
         const formData = new FormData();
         formData.append("file", file);
 
-        setUploadProgress(30);
-
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
           body: formData,
+          headers: { Authorization: `Bearer ${token}` },
           signal: abortController.signal,
         });
 
         if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+          const err = await uploadRes.json().catch(() => ({}));
           throw new Error(err.error || "Upload failed");
         }
 
-        setUploadProgress(70);
-
-        const { url: downloadURL, fileName } = await uploadRes.json();
+        const { url, fileName } = await uploadRes.json();
         const name = file.name.replace(/\.[^.]+$/, "");
 
         // Save as CV version
@@ -138,30 +134,18 @@ export default function CVPreviewModal({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ name, fileName, url: downloadURL }),
+          body: JSON.stringify({ name, fileName, url }),
         });
+
         if (!cvRes.ok) throw new Error("Failed to save CV record");
 
         const savedCv: CVVersion = await cvRes.json();
-
-        // Also update legacy resumeURL for backward compat
-        await fetch("/api/user", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            resumeURL: downloadURL,
-            resumeFileName: fileName,
-          }),
-        });
 
         setUploadProgress(100);
 
         // Update local state immediately
         setLocalCvVersions((prev) => [...prev, savedCv]);
-        setLocalResumeURL(downloadURL);
+        setLocalResumeURL(url);
         setLocalResumeFileName(fileName);
         setSelectedCvId(savedCv.id);
 
@@ -169,15 +153,13 @@ export default function CVPreviewModal({
         onCvUploaded?.();
 
         showToast("CV uploaded!", "success");
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Cancelled by user — already handled in handleCancelUpload
           return;
         }
         console.error("Upload error:", error);
-        showToast(
-          error instanceof Error ? error.message : "Upload failed. Please try again.",
-          "error"
-        );
+        showToast("Upload failed.", "error");
       } finally {
         resetUploadState();
       }
@@ -360,11 +342,10 @@ export default function CVPreviewModal({
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     disabled={isUploading}
-                    className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors ${
-                      dragOver
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800"
-                    } ${isUploading ? "pointer-events-none opacity-60" : "cursor-pointer"}`}
+                    className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors ${dragOver
+                      ? "border-emerald-500 bg-emerald-500/10"
+                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800"
+                      } ${isUploading ? "pointer-events-none opacity-60" : "cursor-pointer"}`}
                   >
                     <svg
                       className={`h-8 w-8 ${dragOver ? "text-emerald-400" : "text-zinc-500"}`}
@@ -419,9 +400,8 @@ export default function CVPreviewModal({
                   Cover Note <span className="normal-case text-zinc-600">(optional)</span>
                 </h4>
                 <span
-                  className={`text-xs tabular-nums ${
-                    charRatio > 0.9 ? "text-red-400" : charRatio > 0.7 ? "text-amber-400" : "text-zinc-500"
-                  }`}
+                  className={`text-xs tabular-nums ${charRatio > 0.9 ? "text-red-400" : charRatio > 0.7 ? "text-amber-400" : "text-zinc-500"
+                    }`}
                 >
                   {charCount > 0 && `${charCount}/${MAX_NOTE_LENGTH}`}
                 </span>

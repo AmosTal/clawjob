@@ -1,4 +1,4 @@
-import { adminDb } from "./firebase-admin";
+import { adminDb, adminStorage } from "./firebase-admin";
 import type { JobCard, Application, UserProfile, CVVersion } from "./types";
 
 const jobsCol = adminDb.collection("jobs");
@@ -316,20 +316,29 @@ export async function addCVVersion(
   const existing = await col.get();
   const isFirst = existing.empty;
 
+  const now = new Date().toISOString();
   const ref = await col.add({
     name: data.name,
     fileName: data.fileName,
     url: data.url,
-    uploadedAt: new Date().toISOString(),
+    uploadedAt: now,
     isDefault: isFirst,
   });
+
+  // Sync legacy profile fields when this is the user's first CV
+  if (isFirst) {
+    await usersCol.doc(userId).update({
+      resumeURL: data.url,
+      resumeFileName: data.fileName,
+    });
+  }
 
   return {
     id: ref.id,
     name: data.name,
     fileName: data.fileName,
     url: data.url,
-    uploadedAt: new Date().toISOString(),
+    uploadedAt: now,
     isDefault: isFirst,
   };
 }
@@ -352,6 +361,22 @@ export async function deleteCVVersion(
   if (!doc.exists) throw new Error("CV not found");
 
   const wasDefault = doc.data()?.isDefault === true;
+  const fileUrl = doc.data()?.url as string | undefined;
+
+  // Delete the actual file from Firebase Storage
+  if (fileUrl) {
+    try {
+      const bucket = adminStorage.bucket();
+      const prefix = `https://storage.googleapis.com/${bucket.name}/`;
+      if (fileUrl.startsWith(prefix)) {
+        const storagePath = fileUrl.slice(prefix.length);
+        await bucket.file(storagePath).delete();
+      }
+    } catch {
+      // Storage deletion is best-effort; don't block Firestore cleanup
+    }
+  }
+
   await col.doc(cvId).delete();
 
   // If deleted CV was default, set the newest remaining as default and sync profile
