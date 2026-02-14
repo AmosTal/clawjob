@@ -112,7 +112,7 @@ export async function createOrUpdateUser(
 
 export async function updateUser(
   userId: string,
-  data: Partial<Pick<UserProfile, "name" | "bio" | "resumeURL" | "resumeFileName" | "role">>
+  data: Partial<Pick<UserProfile, "name" | "bio" | "resumeURL" | "resumeFileName" | "role" | "dangerousMode">>
 ): Promise<void> {
   await usersCol.doc(userId).update(data);
 }

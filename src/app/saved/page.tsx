@@ -9,6 +9,7 @@ import SavedJobCard from "@/components/SavedJobCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
 import { useToast } from "@/components/Toast";
+import CVPreviewModal from "@/components/CVPreviewModal";
 
 function SavedPageContent() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ function SavedPageContent() {
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [cvPreviewJob, setCvPreviewJob] = useState<JobCard | null>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -120,7 +122,12 @@ function SavedPageContent() {
       showToast("Upload your CV first in your profile", "error");
       return;
     }
-    showToast(`${job.company} hiring manager will receive your CV!`, "success");
+    setCvPreviewJob(job);
+  };
+
+  const handleConfirmSend = (job: JobCard, message: string) => {
+    setCvPreviewJob(null);
+    showToast(`CV sent to ${job.company} hiring manager!`, "success");
   };
 
   return (
@@ -196,6 +203,15 @@ function SavedPageContent() {
             </div>
           </AnimatePresence>
         )}
+
+        <CVPreviewModal
+          job={cvPreviewJob}
+          isOpen={!!cvPreviewJob}
+          onClose={() => setCvPreviewJob(null)}
+          onSend={handleConfirmSend}
+          resumeURL={profile?.resumeURL}
+          resumeFileName={profile?.resumeFileName}
+        />
       </div>
     </div>
   );

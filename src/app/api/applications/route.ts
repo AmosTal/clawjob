@@ -26,6 +26,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Verify user is a seeker
+  const { getUser } = await import("@/lib/db");
+  const profile = await getUser(user.uid);
+
+  if (profile?.role === "employer") {
+    return NextResponse.json(
+      { error: "Employers cannot apply for jobs" },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { jobId, message } = body as { jobId?: string; message?: string };

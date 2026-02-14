@@ -59,5 +59,6 @@ export interface UserProfile {
   resumeURL?: string;
   resumeFileName?: string;
   role?: "seeker" | "employer";
+  dangerousMode?: boolean;
   createdAt: string;
 }

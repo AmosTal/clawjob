@@ -38,8 +38,22 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+
+  // Basic validation
+  const { role, company, location } = body;
+  if (!role || !company || !location) {
+    return NextResponse.json(
+      { error: "Missing required fields: role, company, location" },
+      { status: 400 }
+    );
+  }
+
   const docRef = adminDb.collection("jobs").doc();
-  const job: JobCard = { ...body, id: docRef.id };
+  const job: JobCard = {
+    ...body,
+    id: docRef.id,
+    createdAt: new Date().toISOString()
+  };
   await docRef.set(job);
 
   return NextResponse.json(job, { status: 201 });

@@ -39,7 +39,7 @@ function HomeSkeleton() {
 }
 
 export default function HomePage() {
-  const { user, role } = useAuth();
+  const { user, role, userProfile } = useAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [totalJobs, setTotalJobs] = useState(0);
@@ -170,7 +170,7 @@ export default function HomePage() {
           {loadingJobs ? (
             <HomeSkeleton />
           ) : (
-            <SwipeDeck key={filterKey} jobs={displayedJobs} loading={false} />
+            <SwipeDeck key={filterKey} jobs={displayedJobs} loading={false} dangerousMode={userProfile?.dangerousMode ?? false} />
           )}
         </div>
       </div>

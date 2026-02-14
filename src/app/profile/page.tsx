@@ -57,6 +57,7 @@ export default function ProfilePage() {
   const [editResume, setEditResume] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [dangerousMode, setDangerousMode] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,6 +77,7 @@ export default function ProfilePage() {
       setEditName(data.name || "");
       setEditBio(data.bio || "");
       setEditResume(data.resumeURL || "");
+      setDangerousMode(data.dangerousMode ?? false);
     } catch {
       // silently fail
     }
@@ -537,6 +539,50 @@ export default function ProfilePage() {
               >
                 {saving ? "Saving..." : "Save Changes"}
               </motion.button>
+
+              {/* Dangerous Mode Toggle */}
+              <motion.div
+                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3"
+                variants={fadeUp}
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-white">Dangerous Mode</span>
+                  <span className="text-xs text-zinc-500">
+                    {dangerousMode ? "Swipe right = Apply directly" : "Swipe right = Save to review later"}
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const newValue = !dangerousMode;
+                    setDangerousMode(newValue);
+                    try {
+                      const token = await getToken();
+                      await fetch("/api/user", {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ dangerousMode: newValue }),
+                      });
+                      await refreshProfile();
+                      showToast(newValue ? "Dangerous mode enabled" : "Safe mode enabled", "info");
+                    } catch {
+                      setDangerousMode(!newValue);
+                      showToast("Failed to update setting", "error");
+                    }
+                  }}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                    dangerousMode ? "bg-red-500" : "bg-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      dangerousMode ? "translate-x-5" : ""
+                    }`}
+                  />
+                </button>
+              </motion.div>
 
               {/* Switch Role */}
               <motion.button

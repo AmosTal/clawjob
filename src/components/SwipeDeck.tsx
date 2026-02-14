@@ -24,9 +24,10 @@ const SWIPE_THRESHOLD = 120;
 interface SwipeDeckProps {
   jobs: JobCard[];
   loading?: boolean;
+  dangerousMode?: boolean;
 }
 
-export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
+export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckProps) {
   const { showToast } = useToast();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -99,8 +100,8 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
   );
 
   const saveJob = useCallback(
-    async (job: JobCard) => {
-      if (saving) return;
+    async (job: JobCard, skipExit?: boolean) => {
+      if (saving) return true;
 
       setSaving(true);
       try {
@@ -120,9 +121,11 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
         }
 
         showToast(`Saved ${job.role}`, "info");
-        setExitDirection("left");
+        if (!skipExit) setExitDirection("left");
+        return true;
       } catch {
         showToast("Failed to save. Try again.", "error");
+        return false;
       } finally {
         setSaving(false);
       }
@@ -133,16 +136,24 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
   const dismiss = useCallback(
     async (direction: "left" | "right") => {
       if (direction === "right") {
-        const job = jobs[currentIndex];
-        const success = await applyToJob(job);
-        if (!success) {
-          x.set(0);
-          return;
+        if (dangerousMode) {
+          const job = jobs[currentIndex];
+          const success = await applyToJob(job);
+          if (!success) {
+            x.set(0);
+            return;
+          }
+        } else {
+          const saved = await saveJob(jobs[currentIndex], true);
+          if (!saved) {
+            x.set(0);
+            return;
+          }
         }
       }
       setExitDirection(direction);
     },
-    [applyToJob, currentIndex, jobs, x]
+    [applyToJob, saveJob, dangerousMode, currentIndex, jobs, x]
   );
 
   const handleDragEnd = useCallback(
@@ -280,31 +291,54 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
               companyLogo={job.companyLogo}
               onTap={() => setDetailOpen(true)}
             />
-            <SwipeOverlay x={x} />
+            <SwipeOverlay x={x} dangerousMode={dangerousMode} />
           </motion.div>
         </div>
 
-        {/* Right indicator — Apply */}
+        {/* Right indicator — Save or Apply depending on mode */}
         <motion.div
           className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
           style={{ opacity: applyIndicatorOpacity, scale: applyIndicatorScale }}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-emerald-500"
-          >
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-          </svg>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500">
-            Apply
-          </span>
+          {dangerousMode ? (
+            <>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-emerald-500"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500">
+                Apply
+              </span>
+            </>
+          ) : (
+            <>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-amber-500"
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+              </svg>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                Save
+              </span>
+            </>
+          )}
         </motion.div>
       </div>
 
@@ -312,7 +346,12 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
       <ActionButtons
         onSkip={() => dismiss("left")}
         onSave={() => saveJob(job)}
-        onApply={() => dismiss("right")}
+        onApply={async () => {
+          const success = await applyToJob(job);
+          if (success) setExitDirection("right");
+        }}
+        onSwipeRight={() => dismiss("right")}
+        dangerousMode={dangerousMode}
       />
 
       {/* HR Contact Bar */}
