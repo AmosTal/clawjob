@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import type { JobCard } from "@/lib/types";
 
@@ -27,6 +28,12 @@ export default function JobDetailSheet({
   isOpen,
   onClose,
 }: JobDetailSheetProps) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    setShowDetails(false);
+  }, [isOpen]);
+
   if (!job) return null;
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
@@ -90,7 +97,7 @@ export default function JobDetailSheet({
               </h2>
 
               {/* Info row */}
-              <div className="mb-5 flex flex-wrap gap-3 text-sm text-zinc-400">
+              <div className="mb-4 flex flex-wrap gap-3 text-sm text-zinc-400">
                 <span className="flex items-center gap-1.5">
                   <svg
                     width="14"
@@ -147,96 +154,10 @@ export default function JobDetailSheet({
                 )}
               </div>
 
-              {/* Culture tags */}
-              {job.culture && job.culture.length > 0 && (
-                <div className="mb-6 flex flex-wrap gap-2">
-                  {job.culture.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* About this role */}
-              {job.description && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                    About this role
-                  </h3>
-                  <p className="text-sm leading-relaxed text-zinc-300">
-                    {job.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Requirements */}
-              {job.requirements && job.requirements.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                    Requirements
-                  </h3>
-                  <ul className="space-y-2">
-                    {job.requirements.map((req) => (
-                      <li
-                        key={req}
-                        className="flex items-start gap-2 text-sm text-zinc-300"
-                      >
-                        <svg
-                          className="mt-0.5 shrink-0 text-emerald-400"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        {req}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Benefits */}
-              {job.benefits && job.benefits.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                    Benefits
-                  </h3>
-                  <ul className="space-y-2">
-                    {job.benefits.map((benefit) => (
-                      <li
-                        key={benefit}
-                        className="flex items-start gap-2 text-sm text-zinc-300"
-                      >
-                        <svg
-                          className="mt-0.5 shrink-0 text-amber-400"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                        </svg>
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Manager card */}
+              {/* Hiring Manager card — prominent in stage 1 */}
               {job.manager && (
                 <div className="mb-4">
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Hiring Manager
                   </h3>
                   <div className="flex items-center gap-3 rounded-xl bg-zinc-800/60 p-3">
@@ -259,6 +180,132 @@ export default function JobDetailSheet({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Culture tags */}
+              {job.culture && job.culture.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {job.culture.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* View Full Description toggle */}
+              {(job.description || (job.requirements && job.requirements.length > 0) || (job.benefits && job.benefits.length > 0)) && (
+                <>
+                  <button
+                    onClick={() => setShowDetails((v) => !v)}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                  >
+                    {showDetails ? "Hide Description" : "View Full Description"}
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={`transition-transform duration-200 ${showDetails ? "rotate-180" : ""}`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+
+                  {/* Stage 2 — expandable details */}
+                  <AnimatePresence>
+                    {showDetails && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-4">
+                          {/* About this role */}
+                          {job.description && (
+                            <div className="mb-4">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                About this role
+                              </h3>
+                              <p className="text-sm leading-relaxed text-zinc-300">
+                                {job.description}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Requirements */}
+                          {job.requirements && job.requirements.length > 0 && (
+                            <div className="mb-4">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Requirements
+                              </h3>
+                              <ul className="space-y-2">
+                                {job.requirements.map((req) => (
+                                  <li
+                                    key={req}
+                                    className="flex items-start gap-2 text-sm text-zinc-300"
+                                  >
+                                    <svg
+                                      className="mt-0.5 shrink-0 text-emerald-400"
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    {req}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Benefits */}
+                          {job.benefits && job.benefits.length > 0 && (
+                            <div className="mb-4">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Benefits
+                              </h3>
+                              <ul className="space-y-2">
+                                {job.benefits.map((benefit) => (
+                                  <li
+                                    key={benefit}
+                                    className="flex items-start gap-2 text-sm text-zinc-300"
+                                  >
+                                    <svg
+                                      className="mt-0.5 shrink-0 text-amber-400"
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="currentColor"
+                                    >
+                                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                    </svg>
+                                    {benefit}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
             </div>
           </motion.div>

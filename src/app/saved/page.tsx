@@ -71,33 +71,8 @@ function SavedPageContent() {
     if (user) fetchSavedJobs();
   }, [user, fetchSavedJobs]);
 
-  const handleApply = async (job: JobCard) => {
-    try {
-      const token = await getToken();
-
-      // Apply for the job
-      const applyRes = await fetch("/api/applications", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ jobId: job.id }),
-      });
-
-      if (!applyRes.ok) throw new Error("Failed to apply");
-
-      // Remove from saved
-      await fetch(`/api/saved/${job.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setJobs((prev) => prev.filter((j) => j.id !== job.id));
-      showToast(`Applied to ${job.role}!`, "success");
-    } catch {
-      showToast("Failed to apply", "error");
-    }
+  const handleApply = (job: JobCard) => {
+    setCvPreviewJob(job);
   };
 
   const handleRemove = async (jobId: string) => {
@@ -117,17 +92,31 @@ function SavedPageContent() {
     }
   };
 
-  const handleSendCV = (job: JobCard) => {
-    if (!profile?.resumeURL) {
-      showToast("Upload your CV first in your profile", "error");
-      return;
-    }
-    setCvPreviewJob(job);
-  };
-
-  const handleConfirmSend = (job: JobCard, message: string) => {
+  const handleConfirmApply = async (job: JobCard, message: string) => {
     setCvPreviewJob(null);
-    showToast(`CV sent to ${job.company} hiring manager!`, "success");
+    try {
+      const token = await getToken();
+      const applyRes = await fetch("/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ jobId: job.id, message: message || undefined }),
+      });
+      if (!applyRes.ok) throw new Error("Failed to apply");
+
+      // Remove from saved
+      await fetch(`/api/saved/${job.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setJobs((prev) => prev.filter((j) => j.id !== job.id));
+      showToast(`Applied to ${job.role}!`, "success");
+    } catch {
+      showToast("Failed to apply", "error");
+    }
   };
 
   return (
@@ -184,7 +173,7 @@ function SavedPageContent() {
               No saved jobs yet.
             </p>
             <p className="text-sm text-zinc-500">
-              Swipe up on a job card to save it!
+              Swipe right on a job card to save it!
             </p>
           </motion.div>
         ) : (
@@ -196,8 +185,6 @@ function SavedPageContent() {
                   job={job}
                   onApply={handleApply}
                   onRemove={handleRemove}
-                  onSendCV={handleSendCV}
-                  hasResume={!!profile?.resumeURL}
                 />
               ))}
             </div>
@@ -208,7 +195,7 @@ function SavedPageContent() {
           job={cvPreviewJob}
           isOpen={!!cvPreviewJob}
           onClose={() => setCvPreviewJob(null)}
-          onSend={handleConfirmSend}
+          onSend={handleConfirmApply}
           resumeURL={profile?.resumeURL}
           resumeFileName={profile?.resumeFileName}
         />

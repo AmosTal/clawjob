@@ -7,18 +7,14 @@ interface SavedJobCardProps {
   job: JobCard;
   onApply: (job: JobCard) => void;
   onRemove: (jobId: string) => void;
-  onSendCV: (job: JobCard) => void;
-  hasResume: boolean;
 }
 
 export default function SavedJobCard({
   job,
   onApply,
   onRemove,
-  onSendCV,
-  hasResume,
 }: SavedJobCardProps) {
-  const initials = job.manager.name
+  const initials = (job.manager?.name ?? job.company)
     .split(" ")
     .map((w) => w[0])
     .join("")
@@ -37,7 +33,7 @@ export default function SavedJobCard({
     >
       <div className="flex items-center gap-3">
         {/* Manager avatar */}
-        {job.manager.photo ? (
+        {job.manager?.photo ? (
           <img
             src={job.manager.photo}
             alt={job.manager.name}
@@ -52,7 +48,16 @@ export default function SavedJobCard({
         {/* Job info */}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-white">{job.role}</p>
-          <p className="truncate text-xs text-zinc-400">{job.company}</p>
+          <p className="flex items-center gap-1 truncate text-xs text-zinc-400">
+            {job.companyLogo && (
+              <img
+                src={job.companyLogo}
+                alt={job.company}
+                className="h-4 w-4 shrink-0 rounded-sm object-contain"
+              />
+            )}
+            {job.company}
+          </p>
           <div className="mt-0.5 flex items-center gap-2">
             {job.salary && (
               <span className="text-xs text-emerald-400">{job.salary}</span>
@@ -63,27 +68,6 @@ export default function SavedJobCard({
 
         {/* Action buttons */}
         <div className="flex shrink-0 items-center gap-2">
-          <motion.button
-            onClick={() => onSendCV(job)}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="flex items-center gap-1">
-              <svg
-                className="h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-              Send CV
-            </span>
-          </motion.button>
           <motion.button
             onClick={() => onApply(job)}
             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"

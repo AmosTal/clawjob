@@ -219,21 +219,6 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
           )}
           {job.company} &middot; {job.location}
         </p>
-        {job.salary && (
-          <p className="mt-0.5 text-xs font-medium text-emerald-400">
-            {job.salary}
-          </p>
-        )}
-        <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-          {(job.tags ?? []).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs text-zinc-400"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* Swipeable card with side indicators */}
@@ -288,6 +273,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
           >
             <ManagerHero
               manager={manager}
+              company={job.company}
               companyLogo={job.companyLogo}
               onTap={() => setDetailOpen(true)}
             />

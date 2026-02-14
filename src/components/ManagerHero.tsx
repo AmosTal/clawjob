@@ -18,11 +18,12 @@ function Initials({ name }: { name: string }) {
 
 interface ManagerHeroProps {
   manager: ManagerAsset;
+  company?: string;
   companyLogo?: string;
   onTap?: () => void;
 }
 
-export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHeroProps) {
+export default function ManagerHero({ manager, company, companyLogo, onTap }: ManagerHeroProps) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
 
@@ -79,6 +80,22 @@ export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHero
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
+      {/* Company badge — top-left */}
+      {company && (
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 backdrop-blur-sm">
+          {companyLogo && !logoFailed && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={companyLogo}
+              alt={company}
+              className="h-3.5 w-3.5 rounded-sm object-contain"
+              onError={() => setLogoFailed(true)}
+            />
+          )}
+          <span className="text-xs font-medium text-white/80">{company}</span>
+        </div>
+      )}
+
       {/* Text overlay */}
       <div className="absolute inset-x-0 bottom-0 p-5">
         <h2 className="text-2xl font-bold text-white">{manager.name || "Hiring Manager"}</h2>
@@ -88,6 +105,8 @@ export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHero
             &ldquo;{manager.tagline}&rdquo;
           </p>
         )}
+        {/* Tap hint */}
+        <p className="mt-3 text-center text-[10px] text-white/40">Tap to learn more</p>
       </div>
     </motion.div>
   );

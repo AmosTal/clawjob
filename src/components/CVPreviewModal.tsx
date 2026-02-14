@@ -98,6 +98,9 @@ export default function CVPreviewModal({
               ) : (
                 <p className="text-sm text-zinc-500">No CV uploaded. Upload one in your profile.</p>
               )}
+              {resumeURL && (
+                <p className="mt-2 text-xs text-zinc-500">Your CV will be sent along with your application.</p>
+              )}
             </div>
 
             {/* Cover note */}
@@ -127,10 +130,9 @@ export default function CVPreviewModal({
                   onSend(job, message);
                   setMessage("");
                 }}
-                disabled={!resumeURL}
-                className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
               >
-                Send CV
+                {resumeURL ? "Apply Now" : "Apply without CV"}
               </button>
             </div>
           </motion.div>
