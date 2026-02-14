@@ -74,12 +74,12 @@ export default function JobDetailSheet({
             onDragEnd={handleDragEnd}
           >
             {/* Grab handle */}
-            <div className="flex shrink-0 justify-center pt-3 pb-2">
+            <div className="flex shrink-0 justify-center pt-3 pb-2 touch-none">
               <div className="h-1.5 w-10 rounded-full bg-zinc-600" />
             </div>
 
             {/* Scrollable content */}
-            <div className="overflow-y-auto px-6 pb-10">
+            <div className="overflow-y-auto overscroll-contain px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
               {/* Company header */}
               <div className="mb-4 flex items-center gap-3">
                 <div

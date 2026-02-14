@@ -100,11 +100,11 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className="overflow-hidden"
           >
-            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 px-4 py-3 min-w-0">
               {hr.email && (
                 <a
                   href={`mailto:${hr.email}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-emerald-400 transition-colors hover:bg-zinc-700"
+                  className="flex min-w-0 items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-emerald-400 transition-colors hover:bg-zinc-700"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg
@@ -120,7 +120,7 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                   </svg>
-                  {hr.email}
+                  <span className="truncate">{hr.email}</span>
                 </a>
               )}
               {hr.phone && (

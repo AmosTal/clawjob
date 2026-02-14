@@ -151,14 +151,19 @@ function SavedPageContent() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="animate-pulse rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                className="animate-pulse rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-zinc-800" />
+                  <div className="h-[60px] w-[60px] shrink-0 rounded-xl bg-zinc-800" />
                   <div className="flex-1">
-                    <div className="mb-1.5 h-4 w-2/3 rounded bg-zinc-800" />
+                    <div className="mb-1.5 h-4 w-3/4 rounded bg-zinc-800" />
+                    <div className="mb-1 h-3 w-1/2 rounded bg-zinc-800" />
                     <div className="mb-1 h-3 w-1/3 rounded bg-zinc-800" />
                     <div className="h-3 w-1/4 rounded bg-zinc-800" />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="h-7 w-16 rounded-full bg-zinc-800" />
+                    <div className="h-7 w-7 rounded-full bg-zinc-800" />
                   </div>
                 </div>
               </div>
@@ -191,10 +196,11 @@ function SavedPageContent() {
         ) : (
           <AnimatePresence mode="popLayout">
             <div className="flex flex-col gap-3">
-              {jobs.map((job) => (
+              {jobs.map((job, i) => (
                 <SavedJobCard
                   key={job.id}
                   job={job}
+                  index={i}
                   onApply={handleApply}
                   onRemove={handleRemove}
                 />

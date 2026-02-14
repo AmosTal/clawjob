@@ -319,10 +319,10 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm text-zinc-500">
-              <span className="cursor-pointer transition-colors hover:text-zinc-300">About</span>
-              <span className="cursor-pointer transition-colors hover:text-zinc-300">Privacy</span>
-              <span className="cursor-pointer transition-colors hover:text-zinc-300">Terms</span>
-              <span className="cursor-pointer transition-colors hover:text-zinc-300">Contact</span>
+              <Link href="#" className="transition-colors hover:text-zinc-300">About</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-300">Privacy</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-300">Terms</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-300">Contact</Link>
             </div>
           </div>
           <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-zinc-600">

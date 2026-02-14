@@ -48,6 +48,8 @@ export default function CVPreviewModal({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
+  const uploadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Local CV state so modal updates immediately after upload
   const [localCvVersions, setLocalCvVersions] = useState<CVVersion[]>(cvVersions);
@@ -75,6 +77,39 @@ export default function CVPreviewModal({
     }
   }, [isOpen, localCvVersions]);
 
+  const clearUploadTimeout = useCallback(() => {
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+      uploadTimeoutRef.current = null;
+    }
+  }, []);
+
+  const resetUploadState = useCallback(() => {
+    setUploadProgress(null);
+    uploadTaskRef.current = null;
+    clearUploadTimeout();
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [clearUploadTimeout]);
+
+  const resetUploadTimeout = useCallback(() => {
+    clearUploadTimeout();
+    uploadTimeoutRef.current = setTimeout(() => {
+      if (uploadTaskRef.current) {
+        uploadTaskRef.current.cancel();
+        resetUploadState();
+        showToast("Upload timed out — no progress for 15 seconds", "error");
+      }
+    }, 15_000);
+  }, [clearUploadTimeout, resetUploadState, showToast]);
+
+  const handleCancelUpload = useCallback(() => {
+    if (uploadTaskRef.current) {
+      uploadTaskRef.current.cancel();
+    }
+    resetUploadState();
+    showToast("Upload cancelled", "info");
+  }, [resetUploadState, showToast]);
+
   const handleFileUpload = useCallback(
     async (file: File) => {
       const user = auth.currentUser;
@@ -93,83 +128,95 @@ export default function CVPreviewModal({
         return;
       }
 
-      const storageRef = ref(
-        storage,
-        `resumes/${user.uid}/${Date.now()}_${file.name}`
-      );
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      try {
+        const storageRef = ref(
+          storage,
+          `resumes/${user.uid}/${Date.now()}_${file.name}`
+        );
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        uploadTaskRef.current = uploadTask;
 
-      setUploadProgress(0);
+        setUploadProgress(0);
+        resetUploadTimeout();
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const pct = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          );
-          setUploadProgress(pct);
-        },
-        (error) => {
-          console.error("Upload error:", error);
-          setUploadProgress(null);
-          showToast("Upload failed. Please try again.", "error");
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            const token = await user.getIdToken();
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const pct = Math.round(
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            );
+            setUploadProgress(pct);
+            resetUploadTimeout();
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            resetUploadState();
+            if (error.code !== "storage/canceled") {
+              showToast("Upload failed. Please try again.", "error");
+            }
+          },
+          async () => {
+            clearUploadTimeout();
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const token = await user.getIdToken();
 
-            const name = file.name.replace(/\.[^.]+$/, "");
+              const name = file.name.replace(/\.[^.]+$/, "");
 
-            // Save as CV version
-            const res = await fetch("/api/user/cvs", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                name,
-                fileName: file.name,
-                url: downloadURL,
-              }),
-            });
-            if (!res.ok) throw new Error("Failed to save");
+              // Save as CV version
+              const res = await fetch("/api/user/cvs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  name,
+                  fileName: file.name,
+                  url: downloadURL,
+                }),
+              });
+              if (!res.ok) throw new Error("Failed to save");
 
-            const savedCv: CVVersion = await res.json();
+              const savedCv: CVVersion = await res.json();
 
-            // Also update legacy resumeURL for backward compat
-            await fetch("/api/user", {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                resumeURL: downloadURL,
-                resumeFileName: file.name,
-              }),
-            });
+              // Also update legacy resumeURL for backward compat
+              await fetch("/api/user", {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  resumeURL: downloadURL,
+                  resumeFileName: file.name,
+                }),
+              });
 
-            // Update local state immediately
-            setLocalCvVersions((prev) => [...prev, savedCv]);
-            setLocalResumeURL(downloadURL);
-            setLocalResumeFileName(file.name);
-            setSelectedCvId(savedCv.id);
+              // Update local state immediately
+              setLocalCvVersions((prev) => [...prev, savedCv]);
+              setLocalResumeURL(downloadURL);
+              setLocalResumeFileName(file.name);
+              setSelectedCvId(savedCv.id);
 
-            // Notify parent to refresh
-            onCvUploaded?.();
+              // Notify parent to refresh
+              onCvUploaded?.();
 
-            showToast("CV uploaded!", "success");
-          } catch {
-            showToast("Failed to save CV", "error");
-          } finally {
-            setUploadProgress(null);
+              showToast("CV uploaded!", "success");
+            } catch {
+              showToast("Failed to save CV", "error");
+            } finally {
+              resetUploadState();
+            }
           }
-        }
-      );
+        );
+      } catch (error) {
+        console.error("Failed to start upload:", error);
+        resetUploadState();
+        showToast("Failed to start upload. Please try again.", "error");
+      }
     },
-    [showToast, onCvUploaded]
+    [showToast, onCvUploaded, resetUploadTimeout, clearUploadTimeout, resetUploadState]
   );
 
   const handleDrop = useCallback(
@@ -376,8 +423,16 @@ export default function CVPreviewModal({
                   {isUploading && (
                     <div className="mt-3">
                       <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Uploading...</span>
-                        <span>{uploadProgress}%</span>
+                        <span>Uploading... {uploadProgress}%</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelUpload();
+                          }}
+                          className="rounded px-2 py-0.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                        >
+                          Cancel
+                        </button>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
                         <div

@@ -9,7 +9,7 @@ interface EmptyStateProps {
 export default function EmptyState({ onRefresh }: EmptyStateProps) {
   return (
     <motion.div
-      className="flex h-[80vh] flex-col items-center justify-center gap-6 text-center"
+      className="flex h-[70dvh] flex-col items-center justify-center gap-6 text-center"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

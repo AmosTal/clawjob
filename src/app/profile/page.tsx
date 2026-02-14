@@ -64,6 +64,8 @@ export default function ProfilePage() {
   const [renamingCvId, setRenamingCvId] = useState<string | null>(null);
   const [renamingCvValue, setRenamingCvValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
+  const uploadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -118,6 +120,39 @@ export default function ProfilePage() {
     }
   }, [getToken]);
 
+  const clearUploadTimeout = useCallback(() => {
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+      uploadTimeoutRef.current = null;
+    }
+  }, []);
+
+  const resetUploadState = useCallback(() => {
+    setUploadProgress(null);
+    uploadTaskRef.current = null;
+    clearUploadTimeout();
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [clearUploadTimeout]);
+
+  const resetUploadTimeout = useCallback(() => {
+    clearUploadTimeout();
+    uploadTimeoutRef.current = setTimeout(() => {
+      if (uploadTaskRef.current) {
+        uploadTaskRef.current.cancel();
+        resetUploadState();
+        showToast("Upload timed out — no progress for 15 seconds", "error");
+      }
+    }, 15_000);
+  }, [clearUploadTimeout, resetUploadState, showToast]);
+
+  const handleCancelUpload = useCallback(() => {
+    if (uploadTaskRef.current) {
+      uploadTaskRef.current.cancel();
+    }
+    resetUploadState();
+    showToast("Upload cancelled", "info");
+  }, [resetUploadState, showToast]);
+
   const handleFileUpload = useCallback(
     async (file: File) => {
       if (!user) return;
@@ -135,69 +170,81 @@ export default function ProfilePage() {
         return;
       }
 
-      const storageRef = ref(storage, `resumes/${user.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      try {
+        const storageRef = ref(storage, `resumes/${user.uid}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        uploadTaskRef.current = uploadTask;
 
-      setUploadProgress(0);
+        setUploadProgress(0);
+        resetUploadTimeout();
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const pct = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          );
-          setUploadProgress(pct);
-        },
-        (error) => {
-          console.error("Upload error:", error);
-          setUploadProgress(null);
-          showToast("Upload failed. Please try again.", "error");
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            const token = await getToken();
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const pct = Math.round(
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            );
+            setUploadProgress(pct);
+            resetUploadTimeout();
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            resetUploadState();
+            if (error.code !== "storage/canceled") {
+              showToast("Upload failed. Please try again.", "error");
+            }
+          },
+          async () => {
+            clearUploadTimeout();
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const token = await getToken();
 
-            // Derive CV name from filename (strip extension)
-            const name = file.name.replace(/\.[^.]+$/, "");
-            const res = await fetch("/api/user/cvs", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                name,
-                fileName: file.name,
-                url: downloadURL,
-              }),
-            });
-            if (!res.ok) throw new Error("Failed to save");
+              // Derive CV name from filename (strip extension)
+              const name = file.name.replace(/\.[^.]+$/, "");
+              const res = await fetch("/api/user/cvs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  name,
+                  fileName: file.name,
+                  url: downloadURL,
+                }),
+              });
+              if (!res.ok) throw new Error("Failed to save");
 
-            // Also update legacy resumeURL for backward compat
-            await fetch("/api/user", {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                resumeURL: downloadURL,
-                resumeFileName: file.name,
-              }),
-            });
+              // Also update legacy resumeURL for backward compat
+              await fetch("/api/user", {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  resumeURL: downloadURL,
+                  resumeFileName: file.name,
+                }),
+              });
 
-            await fetchCVVersions();
-            showToast("CV uploaded!", "success");
-          } catch {
-            showToast("Failed to save CV", "error");
-          } finally {
-            setUploadProgress(null);
+              await fetchCVVersions();
+              showToast("CV uploaded!", "success");
+            } catch {
+              showToast("Failed to save CV", "error");
+            } finally {
+              resetUploadState();
+            }
           }
-        }
-      );
+        );
+      } catch (error) {
+        console.error("Failed to start upload:", error);
+        resetUploadState();
+        showToast("Failed to start upload. Please try again.", "error");
+      }
     },
-    [user, getToken, showToast, fetchCVVersions]
+    [user, getToken, showToast, fetchCVVersions, resetUploadTimeout, clearUploadTimeout, resetUploadState]
   );
 
   const handleDeleteCV = useCallback(
@@ -706,13 +753,29 @@ export default function ProfilePage() {
 
                   {/* Upload progress bar */}
                   {uploadProgress !== null && (
-                    <div className="mt-3 overflow-hidden rounded-full bg-zinc-800">
-                      <motion.div
-                        className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${uploadProgress}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
+                    <div className="mt-3">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="text-xs text-zinc-400">
+                          Uploading... {uploadProgress}%
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelUpload();
+                          }}
+                          className="rounded px-2 py-0.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <div className="overflow-hidden rounded-full bg-zinc-800">
+                        <motion.div
+                          className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${uploadProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
