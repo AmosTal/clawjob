@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
-import { auth } from "@/lib/firebase-client";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { auth, storage } from "@/lib/firebase-client";
 import type { UserProfile, Application, CVVersion } from "@/lib/types";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -58,7 +59,7 @@ export default function ProfilePage() {
   const [renamingCvId, setRenamingCvId] = useState<string | null>(null);
   const [renamingCvValue, setRenamingCvValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -115,13 +116,14 @@ export default function ProfilePage() {
 
   const resetUploadState = useCallback(() => {
     setUploadProgress(null);
-    abortControllerRef.current = null;
+    uploadTaskRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
   const handleCancelUpload = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (uploadTaskRef.current) {
+      uploadTaskRef.current.cancel();
+      uploadTaskRef.current = null;
     }
     resetUploadState();
     showToast("Upload cancelled", "info");
@@ -144,53 +146,68 @@ export default function ProfilePage() {
         return;
       }
 
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
       setUploadProgress(0);
 
       try {
-        const token = await getToken();
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
+        const filename = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `resumes/${user.uid}/${filename}`);
+        const uploadTask = uploadBytesResumable(storageRef, file, {
+          contentType: file.type || "application/octet-stream",
         });
 
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}));
-          throw new Error(err.error || "Upload failed");
-        }
+        uploadTaskRef.current = uploadTask;
 
-        const { url, fileName } = await uploadRes.json();
-        const name = file.name.replace(/\.[^.]+$/, "");
-
-        // Save metadata to API
-        const cvRes = await fetch("/api/user/cvs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = Math.round(
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            );
+            setUploadProgress(progress);
           },
-          body: JSON.stringify({ name, fileName, url }),
-        });
+          (error) => {
+            if (error.code === "storage/canceled") {
+              return;
+            }
+            console.error("Upload error:", error);
+            showToast("Upload failed.", "error");
+            resetUploadState();
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const token = await getToken();
+              const name = file.name.replace(/\.[^.]+$/, "");
 
-        if (!cvRes.ok) throw new Error("Failed to save CV record");
+              const cvRes = await fetch("/api/user/cvs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  name,
+                  fileName: file.name,
+                  url: downloadURL,
+                }),
+              });
 
-        setUploadProgress(100);
-        await fetchCVVersions();
-        showToast("CV uploaded!", "success");
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === "AbortError") {
-          // Cancelled by user — already handled in handleCancelUpload
-          return;
-        }
-        console.error("Upload error:", error);
-        showToast("Upload failed.", "error");
-      } finally {
+              if (!cvRes.ok) throw new Error("Failed to save CV record");
+
+              setUploadProgress(100);
+              await fetchCVVersions();
+              showToast("CV uploaded!", "success");
+            } catch (err) {
+              console.error("Metadata save error:", err);
+              showToast("Upload succeeded but failed to save details.", "error");
+            } finally {
+              resetUploadState();
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Upload setup error:", error);
+        showToast("Failed to start upload.", "error");
         resetUploadState();
       }
     },
@@ -714,7 +731,7 @@ export default function ProfilePage() {
                       <div className="mb-1.5 flex items-center justify-between">
                         <span className="flex items-center gap-2 text-xs text-zinc-400">
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border border-emerald-400 border-t-transparent" />
-                          Uploading...
+                          Uploading... {uploadProgress}%
                         </span>
                         <button
                           onClick={(e) => {
@@ -727,7 +744,7 @@ export default function ProfilePage() {
                         </button>
                       </div>
                       <div className="overflow-hidden rounded-full bg-zinc-800">
-                        <div className="h-1.5 animate-pulse rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: "100%" }} />
+                        <div className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                       </div>
                     </div>
                   )}

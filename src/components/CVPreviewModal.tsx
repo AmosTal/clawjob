@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth } from "@/lib/firebase-client";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { auth, storage } from "@/lib/firebase-client";
 import { useToast } from "@/components/Toast";
 import type { JobCard, CVVersion } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export default function CVPreviewModal({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
 
   // Local CV state so modal updates immediately after upload
   const [localCvVersions, setLocalCvVersions] = useState<CVVersion[]>(cvVersions);
@@ -73,13 +74,14 @@ export default function CVPreviewModal({
 
   const resetUploadState = useCallback(() => {
     setUploadProgress(null);
-    abortControllerRef.current = null;
+    uploadTaskRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
   const handleCancelUpload = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (uploadTaskRef.current) {
+      uploadTaskRef.current.cancel();
+      uploadTaskRef.current = null;
     }
     resetUploadState();
     showToast("Upload cancelled", "info");
@@ -103,64 +105,74 @@ export default function CVPreviewModal({
         return;
       }
 
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
       setUploadProgress(0);
 
       try {
-        const token = await user.getIdToken();
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
+        const filename = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `resumes/${user.uid}/${filename}`);
+        const uploadTask = uploadBytesResumable(storageRef, file, {
+          contentType: file.type || "application/octet-stream",
         });
 
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}));
-          throw new Error(err.error || "Upload failed");
-        }
+        uploadTaskRef.current = uploadTask;
 
-        const { url, fileName } = await uploadRes.json();
-        const name = file.name.replace(/\.[^.]+$/, "");
-
-        // Save as CV version
-        const cvRes = await fetch("/api/user/cvs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = Math.round(
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            );
+            setUploadProgress(progress);
           },
-          body: JSON.stringify({ name, fileName, url }),
-        });
+          (error) => {
+            if (error.code === "storage/canceled") {
+              return;
+            }
+            console.error("Upload error:", error);
+            showToast("Upload failed.", "error");
+            resetUploadState();
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const token = await user.getIdToken();
+              const name = file.name.replace(/\.[^.]+$/, "");
 
-        if (!cvRes.ok) throw new Error("Failed to save CV record");
+              const cvRes = await fetch("/api/user/cvs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  name,
+                  fileName: file.name,
+                  url: downloadURL,
+                }),
+              });
 
-        const savedCv: CVVersion = await cvRes.json();
+              if (!cvRes.ok) throw new Error("Failed to save CV record");
 
-        setUploadProgress(100);
+              const savedCv: CVVersion = await cvRes.json();
 
-        // Update local state immediately
-        setLocalCvVersions((prev) => [...prev, savedCv]);
-        setLocalResumeURL(url);
-        setLocalResumeFileName(fileName);
-        setSelectedCvId(savedCv.id);
-
-        // Notify parent to refresh
-        onCvUploaded?.();
-
-        showToast("CV uploaded!", "success");
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === "AbortError") {
-          // Cancelled by user — already handled in handleCancelUpload
-          return;
-        }
-        console.error("Upload error:", error);
-        showToast("Upload failed.", "error");
-      } finally {
+              setUploadProgress(100);
+              setLocalCvVersions((prev) => [...prev, savedCv]);
+              setLocalResumeURL(downloadURL);
+              setLocalResumeFileName(file.name);
+              setSelectedCvId(savedCv.id);
+              onCvUploaded?.();
+              showToast("CV uploaded!", "success");
+            } catch (err) {
+              console.error("Metadata save error:", err);
+              showToast("Upload succeeded but failed to save details.", "error");
+            } finally {
+              resetUploadState();
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Upload setup error:", error);
+        showToast("Failed to start upload.", "error");
         resetUploadState();
       }
     },
@@ -372,7 +384,7 @@ export default function CVPreviewModal({
                       <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
                         <span className="flex items-center gap-2">
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border border-emerald-400 border-t-transparent" />
-                          Uploading...
+                          Uploading... {uploadProgress}%
                         </span>
                         <button
                           onClick={(e) => {
@@ -385,7 +397,7 @@ export default function CVPreviewModal({
                         </button>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                        <div className="h-full animate-pulse rounded-full bg-emerald-500" style={{ width: "100%" }} />
+                        <div className="h-full rounded-full bg-emerald-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                       </div>
                     </div>
                   )}
