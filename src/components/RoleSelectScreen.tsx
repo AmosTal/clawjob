@@ -5,6 +5,15 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { auth } from "@/lib/firebase-client";
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.1 } },
+};
+
 export default function RoleSelectScreen() {
   const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState<"seeker" | "employer" | null>(null);
@@ -34,32 +43,38 @@ export default function RoleSelectScreen() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-zinc-950 px-4">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-zinc-950 px-4">
+      {/* Background gradient */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-[430px]"
+        initial="hidden"
+        animate="visible"
+        variants={stagger}
+        className="relative w-full max-w-[430px]"
       >
         {/* Logo */}
-        <div className="mb-8 text-center">
+        <motion.div className="mb-8 text-center" variants={fadeUp} transition={{ duration: 0.5 }}>
           <h1 className="text-4xl font-black tracking-tight text-white">
             claw<span className="text-emerald-400">job</span>
           </h1>
           <p className="mt-2 text-sm text-zinc-400">
             How will you be using clawjob?
           </p>
-        </div>
+        </motion.div>
 
         {/* Role Cards */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <motion.button
+            variants={fadeUp}
+            transition={{ duration: 0.5 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => selectRole("seeker")}
             disabled={loading !== null}
-            className="w-full rounded-2xl bg-zinc-900 p-6 text-left transition-colors hover:bg-zinc-800 disabled:opacity-60"
+            className="group w-full rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60"
           >
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
               <svg
                 className="h-6 w-6 text-emerald-400"
                 fill="none"
@@ -90,12 +105,15 @@ export default function RoleSelectScreen() {
           </motion.button>
 
           <motion.button
+            variants={fadeUp}
+            transition={{ duration: 0.5 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => selectRole("employer")}
             disabled={loading !== null}
-            className="w-full rounded-2xl bg-zinc-900 p-6 text-left transition-colors hover:bg-zinc-800 disabled:opacity-60"
+            className="group w-full rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60"
           >
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
               <svg
                 className="h-6 w-6 text-emerald-400"
                 fill="none"
@@ -127,13 +145,16 @@ export default function RoleSelectScreen() {
         </div>
 
         {error && (
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 text-center text-sm text-red-400"
+            className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-500/10 px-3 py-2.5"
           >
-            {error}
-          </motion.p>
+            <svg className="h-4 w-4 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm text-red-400">{error}</p>
+          </motion.div>
         )}
       </motion.div>
     </div>

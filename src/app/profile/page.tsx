@@ -10,7 +10,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import type { UserProfile, Application } from "@/lib/types";
+import type { UserProfile, Application, CVVersion } from "@/lib/types";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
 import { useRouter } from "next/navigation";
@@ -54,11 +54,13 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
-  const [editResume, setEditResume] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dangerousMode, setDangerousMode] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
+  const [cvName, setCvName] = useState("");
+  const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getToken = useCallback(async () => {
@@ -76,7 +78,6 @@ export default function ProfilePage() {
       setProfile(data);
       setEditName(data.name || "");
       setEditBio(data.bio || "");
-      setEditResume(data.resumeURL || "");
       setDangerousMode(data.dangerousMode ?? false);
     } catch {
       // silently fail
@@ -101,6 +102,20 @@ export default function ProfilePage() {
     }
   }, [getToken]);
 
+  const fetchCVVersions = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/user/cvs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch CVs");
+      const data: CVVersion[] = await res.json();
+      setCvVersions(data);
+    } catch {
+      // silently fail
+    }
+  }, [getToken]);
+
   const handleFileUpload = useCallback(
     async (file: File) => {
       if (!user) return;
@@ -114,7 +129,7 @@ export default function ProfilePage() {
         return;
       }
 
-      const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
+      const storageRef = ref(storage, `resumes/${user.uid}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       setUploadProgress(0);
@@ -136,7 +151,25 @@ export default function ProfilePage() {
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const token = await getToken();
-            const res = await fetch("/api/user", {
+
+            // Save as CV version
+            const name = cvName.trim() || file.name.replace(/\.[^.]+$/, "");
+            const res = await fetch("/api/user/cvs", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                name,
+                fileName: file.name,
+                url: downloadURL,
+              }),
+            });
+            if (!res.ok) throw new Error("Failed to save");
+
+            // Also update legacy resumeURL for backward compat
+            await fetch("/api/user", {
               method: "PATCH",
               headers: {
                 "Content-Type": "application/json",
@@ -147,65 +180,82 @@ export default function ProfilePage() {
                 resumeFileName: file.name,
               }),
             });
-            if (!res.ok) throw new Error("Failed to save");
-            const data: UserProfile = await res.json();
-            setProfile(data);
-            setEditResume(downloadURL);
-            showToast("Resume uploaded!", "success");
+
+            await fetchCVVersions();
+            setCvName("");
+            showToast("CV uploaded!", "success");
           } catch {
-            showToast("Failed to save resume info", "error");
+            showToast("Failed to save CV", "error");
           } finally {
             setUploadProgress(null);
           }
         }
       );
     },
-    [user, getToken, showToast]
+    [user, getToken, showToast, cvName, fetchCVVersions]
   );
 
-  const handleRemoveResume = useCallback(async () => {
-    if (!user || !profile) return;
+  const handleDeleteCV = useCallback(
+    async (cvId: string, fileName: string) => {
+      if (!user) return;
+      setDeletingCvId(cvId);
 
-    try {
-      // If there's a file in storage, try to delete it
-      if (profile.resumeFileName) {
-        const storageRef = ref(
-          storage,
-          `resumes/${user.uid}/${profile.resumeFileName}`
-        );
+      try {
+        const token = await getToken();
+        const res = await fetch(`/api/user/cvs/${cvId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to delete");
+
+        // Try to clean up storage
         try {
+          const storageRef = ref(storage, `resumes/${user.uid}/${fileName}`);
           await deleteObject(storageRef);
         } catch {
-          // File may not exist in storage — ignore
+          // File may not exist — ignore
         }
-      }
 
-      const token = await getToken();
-      const res = await fetch("/api/user", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ resumeURL: "", resumeFileName: "" }),
-      });
-      if (!res.ok) throw new Error("Failed to remove");
-      const data: UserProfile = await res.json();
-      setProfile(data);
-      setEditResume("");
-      showToast("Resume removed", "success");
-    } catch {
-      showToast("Failed to remove resume", "error");
-    }
-  }, [user, profile, getToken, showToast]);
+        await fetchCVVersions();
+        showToast("CV removed", "success");
+      } catch {
+        showToast("Failed to remove CV", "error");
+      } finally {
+        setDeletingCvId(null);
+      }
+    },
+    [user, getToken, showToast, fetchCVVersions]
+  );
+
+  const handleSetDefaultCV = useCallback(
+    async (cvId: string) => {
+      try {
+        const token = await getToken();
+        const res = await fetch(`/api/user/cvs/${cvId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ isDefault: true }),
+        });
+        if (!res.ok) throw new Error("Failed to set default");
+        await fetchCVVersions();
+        showToast("Default CV updated", "success");
+      } catch {
+        showToast("Failed to set default CV", "error");
+      }
+    },
+    [getToken, showToast, fetchCVVersions]
+  );
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchProfile(), fetchStats()]).finally(() =>
+      Promise.all([fetchProfile(), fetchStats(), fetchCVVersions()]).finally(() =>
         setLoading(false)
       );
     }
-  }, [user, fetchProfile, fetchStats]);
+  }, [user, fetchProfile, fetchStats, fetchCVVersions]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -220,7 +270,6 @@ export default function ProfilePage() {
         body: JSON.stringify({
           name: editName,
           bio: editBio,
-          resumeURL: editResume,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -319,17 +368,26 @@ export default function ProfilePage() {
                 className="flex flex-col items-center gap-3 pt-4"
                 variants={fadeUp}
               >
-                {profile?.photoURL ? (
-                  <img
-                    src={profile.photoURL}
-                    alt={profile.name}
-                    className="h-20 w-20 rounded-full border-2 border-zinc-700 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white">
-                    {getInitials(editName || user.email || "U")}
+                <div className="group relative">
+                  {profile?.photoURL ? (
+                    <img
+                      src={profile.photoURL}
+                      alt={profile.name}
+                      className="h-20 w-20 rounded-full border-2 border-zinc-700 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white">
+                      {getInitials(editName || user.email || "U")}
+                    </div>
+                  )}
+                  {/* Camera overlay hint */}
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
                   </div>
-                )}
+                </div>
 
                 {editingName ? (
                   <input
@@ -370,86 +428,168 @@ export default function ProfilePage() {
 
               {/* Stats Row */}
               <motion.div className="flex gap-3" variants={fadeUp}>
-                <div className="flex flex-1 flex-col items-center rounded-xl border border-zinc-800 bg-zinc-900 py-3">
-                  <span className="text-xl font-bold text-white">
-                    {stats.applied}
-                  </span>
-                  <span className="text-xs text-zinc-400">Applied</span>
-                </div>
-                <div className="flex flex-1 flex-col items-center rounded-xl border border-zinc-800 bg-zinc-900 py-3">
-                  <span className="text-xl font-bold text-white">
-                    {stats.interviews}
-                  </span>
-                  <span className="text-xs text-zinc-400">Interviews</span>
-                </div>
-                <div className="flex flex-1 flex-col items-center rounded-xl border border-emerald-800/50 bg-zinc-900 py-3">
-                  <span className="text-xl font-bold text-emerald-400">
-                    {stats.offers}
-                  </span>
-                  <span className="text-xs text-emerald-400/70">Offers</span>
-                </div>
-              </motion.div>
-
-              {/* Bio */}
-              <motion.div className="flex flex-col gap-1.5" variants={fadeUp}>
-                <label className="text-xs font-medium text-zinc-400">Bio</label>
-                <textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  placeholder="Tell employers about yourself..."
-                  rows={3}
-                  className="resize-none rounded-xl border border-zinc-800 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
-                />
-              </motion.div>
-
-              {/* Resume Upload */}
-              <motion.div className="flex flex-col gap-2" variants={fadeUp}>
-                <label className="text-xs font-medium text-zinc-400">
-                  Resume / CV
-                </label>
-
-                {/* Show uploaded file info */}
-                {profile?.resumeFileName && profile?.resumeURL ? (
-                  <div className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3">
-                    <svg
-                      className="h-8 w-8 shrink-0 text-emerald-400"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                {[
+                  { value: stats.applied, label: "Applied", accent: false },
+                  { value: stats.interviews, label: "Interviews", accent: false },
+                  { value: stats.offers, label: "Offers", accent: true },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={`flex flex-1 flex-col items-center rounded-xl border py-3 transition-colors ${
+                      stat.accent
+                        ? "border-emerald-800/50 bg-emerald-500/5"
+                        : "border-zinc-800 bg-zinc-900"
+                    }`}
+                  >
+                    <span
+                      className={`text-xl font-bold ${
+                        stat.accent ? "text-emerald-400" : "text-white"
+                      }`}
                     >
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium text-white">
-                        {profile.resumeFileName}
-                      </span>
-                      <div className="mt-1 flex gap-3">
-                        <a
-                          href={profile.resumeURL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                        >
-                          View
-                        </a>
-                        <button
-                          onClick={handleRemoveResume}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
+                      {stat.value}
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        stat.accent ? "text-emerald-400/70" : "text-zinc-400"
+                      }`}
+                    >
+                      {stat.label}
+                    </span>
                   </div>
-                ) : (
-                  /* Drop zone / file picker */
+                ))}
+              </motion.div>
+
+              {/* Personal Info Section */}
+              <motion.div variants={fadeUp}>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Personal Info
+                </h3>
+                <div className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                  {/* Bio */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-400">Bio</label>
+                    <textarea
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      placeholder="Tell employers about yourself..."
+                      rows={3}
+                      className="resize-none rounded-lg border border-zinc-700/50 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* CV Versions Section */}
+              <motion.div variants={fadeUp}>
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    My CVs
+                  </h3>
+                  {cvVersions.length > 0 && (
+                    <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400">
+                      {cvVersions.length}
+                    </span>
+                  )}
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                  {/* Existing CV list */}
+                  {cvVersions.length > 0 && (
+                    <div className="mb-4 flex flex-col gap-2">
+                      {cvVersions.map((cv) => (
+                        <div
+                          key={cv.id}
+                          className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${
+                            cv.isDefault
+                              ? "border-emerald-700/50 bg-emerald-500/5"
+                              : "border-zinc-700/50 bg-zinc-800"
+                          }`}
+                        >
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                            cv.isDefault ? "bg-emerald-500/15" : "bg-zinc-700/50"
+                          }`}>
+                            <svg
+                              className={`h-4 w-4 ${cv.isDefault ? "text-emerald-400" : "text-zinc-400"}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-white">
+                                {cv.name}
+                              </span>
+                              {cv.isDefault && (
+                                <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-400">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-zinc-500">
+                              {cv.fileName} · {new Date(cv.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <a
+                              href={cv.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white"
+                              title="View"
+                            >
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                            {!cv.isDefault && (
+                              <button
+                                onClick={() => handleSetDefaultCV(cv.id)}
+                                className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-emerald-400"
+                                title="Set as default"
+                              >
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteCV(cv.id, cv.fileName)}
+                              disabled={deletingCvId === cv.id}
+                              className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-red-400 disabled:opacity-50"
+                              title="Delete"
+                            >
+                              {deletingCvId === cv.id ? (
+                                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                              ) : (
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* CV name input */}
+                  <input
+                    value={cvName}
+                    onChange={(e) => setCvName(e.target.value)}
+                    placeholder="CV name (e.g. Frontend CV, Backend CV)"
+                    className="mb-3 w-full rounded-lg border border-zinc-700/50 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
+                  />
+
+                  {/* Drop zone */}
                   <div
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -463,14 +603,14 @@ export default function ProfilePage() {
                       if (file) handleFileUpload(file);
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 transition-colors ${
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 transition-colors ${
                       dragging
                         ? "border-emerald-500 bg-emerald-500/10"
                         : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
                     }`}
                   >
                     <svg
-                      className={`h-8 w-8 ${dragging ? "text-emerald-400" : "text-zinc-500"}`}
+                      className={`h-7 w-7 ${dragging ? "text-emerald-400" : "text-zinc-500"}`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -483,7 +623,7 @@ export default function ProfilePage() {
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
                     <span className="text-sm text-zinc-400">
-                      Drop your resume here or{" "}
+                      Drop a CV here or{" "}
                       <span className="font-medium text-emerald-400">browse</span>
                     </span>
                     <span className="text-xs text-zinc-500">
@@ -501,114 +641,122 @@ export default function ProfilePage() {
                       }}
                     />
                   </div>
-                )}
 
-                {/* Upload progress bar */}
-                {uploadProgress !== null && (
-                  <div className="overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                )}
-
-                {/* Or paste a link */}
-                {!profile?.resumeFileName && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-center text-xs text-zinc-500">
-                      Or paste a link
-                    </span>
-                    <input
-                      value={editResume}
-                      onChange={(e) => setEditResume(e.target.value)}
-                      placeholder="https://example.com/my-resume.pdf"
-                      className="rounded-xl border border-zinc-800 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                )}
+                  {/* Upload progress bar */}
+                  {uploadProgress !== null && (
+                    <div className="mt-3 overflow-hidden rounded-full bg-zinc-800">
+                      <motion.div
+                        className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${uploadProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  )}
+                </div>
               </motion.div>
 
               {/* Save Button */}
               <motion.button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
                 variants={fadeUp}
                 whileTap={{ scale: 0.98 }}
               >
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? (
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  "Save Changes"
+                )}
               </motion.button>
 
-              {/* Dangerous Mode Toggle */}
-              <motion.div
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3"
-                variants={fadeUp}
-              >
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-white">Dangerous Mode</span>
-                  <span className="text-xs text-zinc-500">
-                    {dangerousMode ? "Swipe right = Apply directly" : "Swipe right = Save to review later"}
-                  </span>
+              {/* Preferences Section */}
+              <motion.div variants={fadeUp}>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Preferences
+                </h3>
+                <div className="flex flex-col divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-zinc-900">
+                  {/* Dangerous Mode Toggle */}
+                  <div className="flex items-center justify-between px-4 py-3.5">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-white">Dangerous Mode</span>
+                      <span className="text-xs text-zinc-500">
+                        {dangerousMode ? "Swipe right = Apply directly" : "Swipe right = Save to review later"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const newValue = !dangerousMode;
+                        setDangerousMode(newValue);
+                        try {
+                          const token = await getToken();
+                          await fetch("/api/user", {
+                            method: "PATCH",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ dangerousMode: newValue }),
+                          });
+                          await refreshProfile();
+                          showToast(newValue ? "Dangerous mode enabled" : "Safe mode enabled", "info");
+                        } catch {
+                          setDangerousMode(!newValue);
+                          showToast("Failed to update setting", "error");
+                        }
+                      }}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                        dangerousMode ? "bg-red-500" : "bg-zinc-600"
+                      }`}
+                      role="switch"
+                      aria-checked={dangerousMode}
+                    >
+                      <motion.span
+                        className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white"
+                        animate={{ x: dangerousMode ? 20 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Switch Role */}
+                  <button
+                    onClick={handleSwitchRole}
+                    disabled={switchingRole}
+                    className="flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-zinc-800/50 disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg className="h-4 w-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="17 1 21 5 17 9" />
+                        <path d="M3 11V9a4 4 0 014-4h14" />
+                        <polyline points="7 23 3 19 7 15" />
+                        <path d="M21 13v2a4 4 0 01-4 4H3" />
+                      </svg>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-white">
+                          {switchingRole
+                            ? "Switching..."
+                            : role === "employer"
+                              ? "Switch to Job Seeker"
+                              : "Switch to Employer"}
+                        </span>
+                        <span className="text-xs text-zinc-500">
+                          Currently: {role === "employer" ? "Employer" : "Job Seeker"}
+                        </span>
+                      </div>
+                    </div>
+                    <svg className="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
                 </div>
-                <button
-                  onClick={async () => {
-                    const newValue = !dangerousMode;
-                    setDangerousMode(newValue);
-                    try {
-                      const token = await getToken();
-                      await fetch("/api/user", {
-                        method: "PATCH",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({ dangerousMode: newValue }),
-                      });
-                      await refreshProfile();
-                      showToast(newValue ? "Dangerous mode enabled" : "Safe mode enabled", "info");
-                    } catch {
-                      setDangerousMode(!newValue);
-                      showToast("Failed to update setting", "error");
-                    }
-                  }}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
-                    dangerousMode ? "bg-red-500" : "bg-zinc-600"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      dangerousMode ? "translate-x-5" : ""
-                    }`}
-                  />
-                </button>
               </motion.div>
-
-              {/* Switch Role */}
-              <motion.button
-                onClick={handleSwitchRole}
-                disabled={switchingRole}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 py-3 text-sm font-medium text-zinc-300 transition-colors hover:border-emerald-600 hover:text-white disabled:opacity-50"
-                variants={fadeUp}
-                whileTap={{ scale: 0.98 }}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="17 1 21 5 17 9" />
-                  <path d="M3 11V9a4 4 0 014-4h14" />
-                  <polyline points="7 23 3 19 7 15" />
-                  <path d="M21 13v2a4 4 0 01-4 4H3" />
-                </svg>
-                {switchingRole
-                  ? "Switching..."
-                  : role === "employer"
-                    ? "Switch to Job Seeker"
-                    : "Switch to Employer"}
-              </motion.button>
 
               {/* Sign Out */}
               <motion.button
                 onClick={handleSignOut}
-                className="w-full py-3 text-sm font-medium text-red-400 transition-colors hover:text-red-300"
+                className="w-full rounded-xl border border-zinc-800 py-3 text-sm font-medium text-red-400 transition-colors hover:border-red-500/30 hover:bg-red-500/5"
                 variants={fadeUp}
                 whileTap={{ scale: 0.98 }}
               >

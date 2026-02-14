@@ -12,16 +12,88 @@ interface ApplicationCardProps {
   onWithdraw?: (id: string) => void;
 }
 
+const statusSteps = ["applied", "reviewing", "interview", "offer"] as const;
+
 const statusConfig: Record<
   Application["status"],
-  { bg: string; text: string; label: string }
+  { bg: string; text: string; dot: string; label: string; icon: React.ReactNode }
 > = {
-  applied: { bg: "bg-zinc-600", text: "text-zinc-300", label: "Applied" },
-  reviewing: { bg: "bg-amber-600", text: "text-amber-200", label: "Reviewing" },
-  interview: { bg: "bg-sky-600", text: "text-sky-200", label: "Interview" },
-  offer: { bg: "bg-emerald-600", text: "text-emerald-200", label: "Offer" },
-  rejected: { bg: "bg-red-600", text: "text-red-200", label: "Rejected" },
-  withdrawn: { bg: "bg-zinc-700", text: "text-zinc-400", label: "Withdrawn" },
+  applied: {
+    bg: "bg-zinc-800",
+    text: "text-zinc-300",
+    dot: "bg-zinc-400",
+    label: "Applied",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 11 12 14 22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+    ),
+  },
+  reviewing: {
+    bg: "bg-amber-500/15",
+    text: "text-amber-300",
+    dot: "bg-amber-400",
+    label: "Reviewing",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+  },
+  interview: {
+    bg: "bg-sky-500/15",
+    text: "text-sky-300",
+    dot: "bg-sky-400",
+    label: "Interview",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 00-3-3.87" />
+        <path d="M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    ),
+  },
+  offer: {
+    bg: "bg-emerald-500/15",
+    text: "text-emerald-300",
+    dot: "bg-emerald-400",
+    label: "Offer",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    ),
+  },
+  rejected: {
+    bg: "bg-red-500/15",
+    text: "text-red-300",
+    dot: "bg-red-400",
+    label: "Rejected",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    ),
+  },
+  withdrawn: {
+    bg: "bg-zinc-800",
+    text: "text-zinc-500",
+    dot: "bg-zinc-500",
+    label: "Withdrawn",
+    icon: (
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+      </svg>
+    ),
+  },
 };
 
 export default function ApplicationCard({
@@ -62,6 +134,12 @@ export default function ApplicationCard({
     { month: "short", day: "numeric", year: "numeric" }
   );
 
+  // Timeline progress for non-terminal states
+  const isTerminal = application.status === "rejected" || application.status === "withdrawn";
+  const currentStepIndex = statusSteps.indexOf(
+    application.status as (typeof statusSteps)[number]
+  );
+
   return (
     <motion.div
       className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
@@ -69,30 +147,60 @@ export default function ApplicationCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
     >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold text-white">
-            {application.jobTitle}
-          </p>
-          <p className="mt-0.5 text-sm text-zinc-400">{application.company}</p>
-          <p className="mt-1 text-xs text-zinc-500">{appliedDate}</p>
+      <div className="flex items-start justify-between gap-3">
+        {/* Company initials + job info */}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-xs font-bold text-zinc-400">
+            {application.company
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-white">
+              {application.jobTitle}
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-400">{application.company}</p>
+            <p className="mt-0.5 text-xs text-zinc-500">{appliedDate}</p>
+          </div>
         </div>
 
+        {/* Status badge */}
         <span
-          className={`ml-3 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.bg} ${status.text}`}
         >
+          {status.icon}
           {status.label}
         </span>
       </div>
 
+      {/* Timeline progress */}
+      {!isTerminal && currentStepIndex >= 0 && (
+        <div className="mt-3.5 flex items-center gap-1">
+          {statusSteps.map((step, i) => (
+            <div
+              key={step}
+              className={`h-1 flex-1 rounded-full transition-colors ${
+                i <= currentStepIndex
+                  ? statusConfig[step].dot
+                  : "bg-zinc-800"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
       {application.status === "applied" && (
-        <button
+        <motion.button
           onClick={handleWithdraw}
           disabled={withdrawing}
-          className="mt-3 text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-50"
+          className="mt-3 text-xs font-medium text-red-400 transition-colors hover:text-red-300 disabled:opacity-50"
+          whileTap={{ scale: 0.95 }}
         >
-          {withdrawing ? "Withdrawing..." : "Withdraw"}
-        </button>
+          {withdrawing ? "Withdrawing..." : "Withdraw Application"}
+        </motion.button>
       )}
     </motion.div>
   );

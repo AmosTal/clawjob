@@ -39,7 +39,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { jobId, message } = body as { jobId?: string; message?: string };
+    const { jobId, message, resumeVersionId } = body as {
+      jobId?: string;
+      message?: string;
+      resumeVersionId?: string;
+    };
 
     if (!jobId) {
       return NextResponse.json(
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const appId = await createApplication(user.uid, jobId, message);
+    const appId = await createApplication(user.uid, jobId, message, resumeVersionId);
     return NextResponse.json({ id: appId }, { status: 201 });
   } catch (err) {
     const message =

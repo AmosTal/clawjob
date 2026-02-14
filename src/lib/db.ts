@@ -1,11 +1,13 @@
 import { adminDb } from "./firebase-admin";
-import type { JobCard, Application, UserProfile } from "./types";
+import type { JobCard, Application, UserProfile, CVVersion } from "./types";
 
 const jobsCol = adminDb.collection("jobs");
 const applicationsCol = adminDb.collection("applications");
 const usersCol = adminDb.collection("users");
 const savedCol = (userId: string) =>
   usersCol.doc(userId).collection("saved");
+const cvVersionsCol = (userId: string) =>
+  usersCol.doc(userId).collection("cvVersions");
 
 export async function getJobs(
   limit = 20,
@@ -31,12 +33,13 @@ export async function getJobById(id: string): Promise<JobCard | null> {
 export async function createApplication(
   userId: string,
   jobId: string,
-  message?: string
+  message?: string,
+  resumeVersionId?: string
 ): Promise<string> {
   const job = await getJobById(jobId);
   if (!job) throw new Error("Job not found");
 
-  const ref = await applicationsCol.add({
+  const data: Record<string, unknown> = {
     userId,
     jobId,
     jobTitle: job.role,
@@ -44,7 +47,10 @@ export async function createApplication(
     status: "applied",
     message: message ?? null,
     appliedAt: new Date().toISOString(),
-  });
+  };
+  if (resumeVersionId) data.resumeVersionId = resumeVersionId;
+
+  const ref = await applicationsCol.add(data);
   return ref.id;
 }
 
@@ -297,4 +303,77 @@ export async function getJobApplicationCount(jobId: string): Promise<number> {
     .select()
     .get();
   return snap.size;
+}
+
+// ── CV Version functions ──────────────────────────────────────────
+
+export async function addCVVersion(
+  userId: string,
+  data: { name: string; fileName: string; url: string }
+): Promise<CVVersion> {
+  const col = cvVersionsCol(userId);
+  const existing = await col.get();
+  const isFirst = existing.empty;
+
+  const ref = await col.add({
+    name: data.name,
+    fileName: data.fileName,
+    url: data.url,
+    uploadedAt: new Date().toISOString(),
+    isDefault: isFirst,
+  });
+
+  return {
+    id: ref.id,
+    name: data.name,
+    fileName: data.fileName,
+    url: data.url,
+    uploadedAt: new Date().toISOString(),
+    isDefault: isFirst,
+  };
+}
+
+export async function getCVVersions(userId: string): Promise<CVVersion[]> {
+  const snap = await cvVersionsCol(userId)
+    .orderBy("uploadedAt", "desc")
+    .get();
+  return snap.docs.map(
+    (doc) => ({ id: doc.id, ...doc.data() }) as CVVersion
+  );
+}
+
+export async function deleteCVVersion(
+  userId: string,
+  cvId: string
+): Promise<void> {
+  const col = cvVersionsCol(userId);
+  const doc = await col.doc(cvId).get();
+  if (!doc.exists) throw new Error("CV not found");
+
+  const wasDefault = doc.data()?.isDefault === true;
+  await col.doc(cvId).delete();
+
+  // If deleted CV was default, set the newest remaining as default
+  if (wasDefault) {
+    const remaining = await col.orderBy("uploadedAt", "desc").limit(1).get();
+    if (!remaining.empty) {
+      await remaining.docs[0].ref.update({ isDefault: true });
+    }
+  }
+}
+
+export async function setDefaultCV(
+  userId: string,
+  cvId: string
+): Promise<void> {
+  const col = cvVersionsCol(userId);
+  const doc = await col.doc(cvId).get();
+  if (!doc.exists) throw new Error("CV not found");
+
+  // Unset all defaults
+  const snap = await col.where("isDefault", "==", true).get();
+  const batch = adminDb.batch();
+  snap.docs.forEach((d) => batch.update(d.ref, { isDefault: false }));
+  batch.update(col.doc(cvId), { isDefault: true });
+  await batch.commit();
 }

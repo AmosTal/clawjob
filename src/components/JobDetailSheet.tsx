@@ -29,9 +29,11 @@ export default function JobDetailSheet({
   onClose,
 }: JobDetailSheetProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     setShowDetails(false);
+    setLogoFailed(false);
   }, [isOpen]);
 
   if (!job) return null;
@@ -81,14 +83,31 @@ export default function JobDetailSheet({
               {/* Company header */}
               <div className="mb-4 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white"
+                  className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold text-white"
                   style={{ backgroundColor: color }}
                 >
+                  {/* Colored initial fallback */}
                   {job.company.charAt(0).toUpperCase()}
+
+                  {/* Company logo overlay */}
+                  {job.companyLogo && !logoFailed && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={job.companyLogo}
+                      alt={job.company}
+                      className="absolute inset-0 h-full w-full rounded-full object-cover"
+                      onError={() => setLogoFailed(true)}
+                    />
+                  )}
                 </div>
-                <span className="text-base font-medium text-zinc-300">
-                  {job.company}
-                </span>
+                <div>
+                  <span className="text-base font-medium text-zinc-300">
+                    {job.company}
+                  </span>
+                  {job.location && (
+                    <p className="text-xs text-zinc-500">{job.location}</p>
+                  )}
+                </div>
               </div>
 
               {/* Role title */}
@@ -97,25 +116,27 @@ export default function JobDetailSheet({
               </h2>
 
               {/* Info row */}
-              <div className="mb-4 flex flex-wrap gap-3 text-sm text-zinc-400">
-                <span className="flex items-center gap-1.5">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  {job.location}
-                </span>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {job.location && (
+                  <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {job.location}
+                  </span>
+                )}
                 {job.salary && (
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
                     <svg
                       width="14"
                       height="14"
@@ -133,7 +154,7 @@ export default function JobDetailSheet({
                   </span>
                 )}
                 {job.teamSize && (
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
                     <svg
                       width="14"
                       height="14"
@@ -154,7 +175,7 @@ export default function JobDetailSheet({
                 )}
               </div>
 
-              {/* Hiring Manager card — prominent in stage 1 */}
+              {/* Hiring Manager card */}
               {job.manager && (
                 <div className="mb-4">
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -199,12 +220,13 @@ export default function JobDetailSheet({
               {/* View Full Description toggle */}
               {(job.description || (job.requirements && job.requirements.length > 0) || (job.benefits && job.benefits.length > 0)) && (
                 <>
-                  <button
+                  <motion.button
                     onClick={() => setShowDetails((v) => !v)}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/80 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                    whileTap={{ scale: 0.98 }}
                   >
                     {showDetails ? "Hide Description" : "View Full Description"}
-                    <svg
+                    <motion.svg
                       width="16"
                       height="16"
                       viewBox="0 0 24 24"
@@ -213,20 +235,21 @@ export default function JobDetailSheet({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className={`transition-transform duration-200 ${showDetails ? "rotate-180" : ""}`}
+                      animate={{ rotate: showDetails ? 180 : 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     >
                       <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
+                    </motion.svg>
+                  </motion.button>
 
-                  {/* Stage 2 — expandable details */}
+                  {/* Stage 2 -- expandable details */}
                   <AnimatePresence>
                     {showDetails && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         className="overflow-hidden"
                       >
                         <div className="pt-4">

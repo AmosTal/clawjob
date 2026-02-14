@@ -74,12 +74,15 @@ export default function SignInScreen() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-zinc-950 px-4">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-zinc-950 px-4">
+      {/* Subtle background gradient */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-[430px]"
+        className="relative w-full max-w-[430px]"
       >
         {/* Logo */}
         <div className="mb-8 text-center">
@@ -94,7 +97,7 @@ export default function SignInScreen() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl bg-zinc-900 p-6">
+        <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6">
           {/* Google Sign-In */}
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -114,39 +117,53 @@ export default function SignInScreen() {
 
           {/* Divider */}
           <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-zinc-700" />
+            <div className="h-px flex-1 bg-zinc-700/50" />
             <span className="text-xs text-zinc-500">or</span>
-            <div className="h-px flex-1 bg-zinc-700" />
+            <div className="h-px flex-1 bg-zinc-700/50" />
           </div>
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailSubmit} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 transition-colors"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 transition-colors"
-            />
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                aria-label="Email address"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                aria-label="Password"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+              />
+              {isSignUp && (
+                <p className="mt-1.5 text-xs text-zinc-500">
+                  Must be at least 6 characters
+                </p>
+              )}
+            </div>
 
             {error && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-red-400"
+                className="flex items-start gap-2 rounded-lg bg-red-500/10 px-3 py-2.5"
               >
-                {error}
-              </motion.p>
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-red-400">{error}</p>
+              </motion.div>
             )}
 
             <motion.button
@@ -166,7 +183,7 @@ export default function SignInScreen() {
           </form>
 
           {/* Toggle sign-in / sign-up */}
-          <p className="mt-4 text-center text-sm text-zinc-400">
+          <p className="mt-5 text-center text-sm text-zinc-400">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
             <button
               type="button"
@@ -174,7 +191,7 @@ export default function SignInScreen() {
                 setIsSignUp(!isSignUp);
                 setError("");
               }}
-              className="text-emerald-400 hover:underline"
+              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300"
             >
               {isSignUp ? "Sign in" : "Sign up"}
             </button>

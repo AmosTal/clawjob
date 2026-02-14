@@ -30,7 +30,7 @@ const AUTO_DISMISS_MS = 3000;
 const icons: Record<ToastType, ReactNode> = {
   success: (
     <svg
-      className="h-5 w-5 shrink-0"
+      className="h-4 w-4 shrink-0"
       viewBox="0 0 20 20"
       fill="currentColor"
     >
@@ -43,7 +43,7 @@ const icons: Record<ToastType, ReactNode> = {
   ),
   error: (
     <svg
-      className="h-5 w-5 shrink-0"
+      className="h-4 w-4 shrink-0"
       viewBox="0 0 20 20"
       fill="currentColor"
     >
@@ -56,7 +56,7 @@ const icons: Record<ToastType, ReactNode> = {
   ),
   info: (
     <svg
-      className="h-5 w-5 shrink-0"
+      className="h-4 w-4 shrink-0"
       viewBox="0 0 20 20"
       fill="currentColor"
     >
@@ -70,9 +70,9 @@ const icons: Record<ToastType, ReactNode> = {
 };
 
 const bgColors: Record<ToastType, string> = {
-  success: "bg-emerald-600",
-  error: "bg-red-600",
-  info: "bg-blue-600",
+  success: "bg-emerald-600 shadow-emerald-500/20",
+  error: "bg-red-600 shadow-red-500/20",
+  info: "bg-zinc-700 shadow-zinc-500/10",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -98,17 +98,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2">
+      <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2">
         <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
               layout
-              initial={{ opacity: 0, y: -100, scale: 0.9 }}
+              initial={{ opacity: 0, y: -40, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -100, scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.15 } }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className={`pointer-events-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white shadow-lg ${bgColors[toast.type]}`}
+              onClick={() => removeToast(toast.id)}
+              role="alert"
             >
               {icons[toast.type]}
               {toast.message}

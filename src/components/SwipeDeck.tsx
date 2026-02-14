@@ -5,7 +5,9 @@ import {
   motion,
   useMotionValue,
   useTransform,
+  useSpring,
   type PanInfo,
+  AnimatePresence,
 } from "framer-motion";
 import type { JobCard } from "@/lib/types";
 import { useToast } from "@/components/Toast";
@@ -46,12 +48,18 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
   const opacity = useTransform(x, [-300, -100, 0, 100, 300], [0, 1, 1, 1, 0]);
 
-  // Side indicator transforms — left (skip)
-  const skipIndicatorOpacity = useTransform(x, [0, -100], [0.3, 1]);
-  const skipIndicatorScale = useTransform(x, [0, -100], [1, 1.2]);
-  // Side indicator transforms — right (apply)
-  const applyIndicatorOpacity = useTransform(x, [0, 100], [0.3, 1]);
-  const applyIndicatorScale = useTransform(x, [0, 100], [1, 1.2]);
+  // Spring-based side indicator transforms for a fluid, bouncy feel
+  const springConfig = { stiffness: 200, damping: 20, mass: 0.8 };
+
+  const rawSkipOpacity = useTransform(x, [0, -60, -140], [0.25, 0.6, 1]);
+  const rawSkipScale = useTransform(x, [0, -60, -140], [0.9, 1.05, 1.25]);
+  const rawApplyOpacity = useTransform(x, [0, 60, 140], [0.25, 0.6, 1]);
+  const rawApplyScale = useTransform(x, [0, 60, 140], [0.9, 1.05, 1.25]);
+
+  const skipIndicatorOpacity = useSpring(rawSkipOpacity, springConfig);
+  const skipIndicatorScale = useSpring(rawSkipScale, springConfig);
+  const applyIndicatorOpacity = useSpring(rawApplyOpacity, springConfig);
+  const applyIndicatorScale = useSpring(rawApplyScale, springConfig);
 
   const advance = useCallback(() => {
     setExitDirection(null);
@@ -204,7 +212,9 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     <div className="flex flex-col gap-3">
       {/* Job header */}
       <div className="px-1 text-center">
-        <p className="text-lg font-bold text-white">{job.role}</p>
+        <h1 className="text-lg font-bold leading-tight text-white">
+          {job.role}
+        </h1>
         <p className="flex items-center justify-center gap-1.5 text-sm text-zinc-400">
           {job.companyLogo && (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -223,7 +233,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
 
       {/* Swipeable card with side indicators */}
       <div className="flex items-center gap-1">
-        {/* Left indicator — Skip */}
+        {/* Left indicator -- Skip */}
         <motion.div
           className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
           style={{ opacity: skipIndicatorOpacity, scale: skipIndicatorScale }}
@@ -247,41 +257,48 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
           </span>
         </motion.div>
 
-        {/* Center — Draggable card */}
+        {/* Center -- Draggable card */}
         <div className="relative min-w-0 flex-1">
-          <motion.div
-            key={job.id}
-            className="touch-none"
-            style={{ x, rotate, opacity }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.9}
-            onDragEnd={handleDragEnd}
-            animate={
-              exitDirection
-                ? {
-                    x: exitDirection === "right" ? 500 : -500,
-                    rotate: exitDirection === "right" ? 20 : -20,
-                    opacity: 0,
-                  }
-                : {}
-            }
-            transition={exitDirection ? { duration: 0.35, ease: "easeIn" } : {}}
-            onAnimationComplete={() => {
-              if (exitDirection) advance();
-            }}
-          >
-            <ManagerHero
-              manager={manager}
-              company={job.company}
-              companyLogo={job.companyLogo}
-              onTap={() => setDetailOpen(true)}
-            />
-            <SwipeOverlay x={x} dangerousMode={dangerousMode} />
-          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={job.id}
+              className="touch-none"
+              style={{ x, rotate, opacity }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.9}
+              onDragEnd={handleDragEnd}
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={
+                exitDirection
+                  ? {
+                      x: exitDirection === "right" ? 500 : -500,
+                      rotate: exitDirection === "right" ? 20 : -20,
+                      opacity: 0,
+                    }
+                  : { scale: 1, opacity: 1 }
+              }
+              transition={
+                exitDirection
+                  ? { duration: 0.35, ease: "easeIn" }
+                  : { type: "spring", stiffness: 300, damping: 25 }
+              }
+              onAnimationComplete={() => {
+                if (exitDirection) advance();
+              }}
+            >
+              <ManagerHero
+                manager={manager}
+                company={job.company}
+                companyLogo={job.companyLogo}
+                onTap={() => setDetailOpen(true)}
+              />
+              <SwipeOverlay x={x} dangerousMode={dangerousMode} />
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* Right indicator — Save or Apply depending on mode */}
+        {/* Right indicator -- Save or Apply depending on mode */}
         <motion.div
           className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
           style={{ opacity: applyIndicatorOpacity, scale: applyIndicatorScale }}

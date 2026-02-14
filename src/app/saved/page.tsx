@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { auth } from "@/lib/firebase-client";
-import type { JobCard, UserProfile } from "@/lib/types";
+import type { JobCard, UserProfile, CVVersion } from "@/lib/types";
 import SavedJobCard from "@/components/SavedJobCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -18,6 +18,7 @@ function SavedPageContent() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [cvPreviewJob, setCvPreviewJob] = useState<JobCard | null>(null);
+  const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -27,17 +28,24 @@ function SavedPageContent() {
     setLoading(true);
     try {
       const token = await getToken();
-      const [res, profileRes] = await Promise.all([
+      const [res, profileRes, cvsRes] = await Promise.all([
         fetch("/api/saved", {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch("/api/user", {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch("/api/user/cvs", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
       if (profileRes.ok) {
         const profileData: UserProfile = await profileRes.json();
         setProfile(profileData);
+      }
+      if (cvsRes.ok) {
+        const cvsData: CVVersion[] = await cvsRes.json();
+        setCvVersions(cvsData);
       }
       if (!res.ok) throw new Error("Failed to fetch saved jobs");
       const savedIds: string[] = await res.json();
@@ -92,7 +100,7 @@ function SavedPageContent() {
     }
   };
 
-  const handleConfirmApply = async (job: JobCard, message: string) => {
+  const handleConfirmApply = async (job: JobCard, message: string, resumeVersionId?: string) => {
     setCvPreviewJob(null);
     try {
       const token = await getToken();
@@ -102,7 +110,11 @@ function SavedPageContent() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ jobId: job.id, message: message || undefined }),
+        body: JSON.stringify({
+          jobId: job.id,
+          message: message || undefined,
+          resumeVersionId: resumeVersionId || undefined,
+        }),
       });
       if (!applyRes.ok) throw new Error("Failed to apply");
 
@@ -198,6 +210,7 @@ function SavedPageContent() {
           onSend={handleConfirmApply}
           resumeURL={profile?.resumeURL}
           resumeFileName={profile?.resumeFileName}
+          cvVersions={cvVersions}
         />
       </div>
     </div>

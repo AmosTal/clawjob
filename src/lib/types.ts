@@ -33,6 +33,15 @@ export interface JobCard {
   createdAt?: string;
 }
 
+export interface CVVersion {
+  id: string;
+  name: string;
+  fileName: string;
+  url: string;
+  uploadedAt: string;
+  isDefault: boolean;
+}
+
 export interface Application {
   id: string;
   userId: string;
@@ -47,6 +56,7 @@ export interface Application {
     | "rejected"
     | "withdrawn";
   message?: string;
+  resumeVersionId?: string;
   appliedAt: string;
 }
 
