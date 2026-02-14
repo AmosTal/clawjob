@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.6.1';
+export const APP_VERSION = '0.6.2';
 export const APP_NAME = 'clawjob';
 
 /** Real company logos via Clearbit Logo API */
