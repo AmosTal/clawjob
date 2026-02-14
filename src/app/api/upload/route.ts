@@ -58,15 +58,39 @@ export async function POST(request: Request) {
       },
     });
 
-    // Build Firebase Storage download URL (works without makePublic/IAM changes)
-    const encodedPath = encodeURIComponent(storagePath);
-    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media`;
+    // Try to make file public for a permanent URL; fall back to signed URL
+    let url: string;
+    try {
+      await fileRef.makePublic();
+      url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    } catch {
+      // makePublic may fail if bucket uses uniform access control;
+      // fall back to a long-lived signed URL (1 year)
+      const [signedUrl] = await fileRef.getSignedUrl({
+        action: "read",
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      });
+      url = signedUrl;
+    }
 
     return NextResponse.json({ url, fileName: file.name });
-  } catch (err) {
-    console.error("POST /api/upload error:", err);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("POST /api/upload error:", errMsg);
+
+    // Provide a clear message when the storage bucket hasn't been provisioned
+    if (errMsg.includes("does not exist") || errMsg.includes("404")) {
+      return NextResponse.json(
+        {
+          error:
+            "Storage bucket not found. Please enable Firebase Storage in the Firebase Console.",
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Upload failed" },
+      { error: `Upload failed: ${errMsg}` },
       { status: 500 }
     );
   }
