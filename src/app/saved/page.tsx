@@ -211,6 +211,29 @@ function SavedPageContent() {
           resumeURL={profile?.resumeURL}
           resumeFileName={profile?.resumeFileName}
           cvVersions={cvVersions}
+          onCvUploaded={async () => {
+            try {
+              const token = await getToken();
+              const [cvsRes, profileRes] = await Promise.all([
+                fetch("/api/user/cvs", {
+                  headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch("/api/user", {
+                  headers: { Authorization: `Bearer ${token}` },
+                }),
+              ]);
+              if (cvsRes.ok) {
+                const data: CVVersion[] = await cvsRes.json();
+                setCvVersions(data);
+              }
+              if (profileRes.ok) {
+                const data: UserProfile = await profileRes.json();
+                setProfile(data);
+              }
+            } catch {
+              // silently fail — modal already has the local state
+            }
+          }}
         />
       </div>
     </div>

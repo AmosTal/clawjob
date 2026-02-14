@@ -11,28 +11,23 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
-
   try {
+    const { id } = await params;
     const body = await request.json();
-    if (body.status !== "withdrawn") {
-      return NextResponse.json(
-        { error: "Only withdrawal is supported" },
-        { status: 400 }
-      );
+
+    if (body.status === "withdrawn") {
+      await withdrawApplication(id, user.uid);
+      return NextResponse.json({ ok: true });
     }
 
-    await withdrawApplication(id, user.uid);
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { error: "Invalid status update" },
+      { status: 400 }
+    );
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to update application";
-    const status =
-      message === "Application not found"
-        ? 404
-        : message === "Forbidden"
-          ? 403
-          : 500;
+    const status = message === "Application not found" ? 404 : 500;
     console.error("PATCH /api/applications/[id] error:", err);
     return NextResponse.json({ error: message }, { status });
   }

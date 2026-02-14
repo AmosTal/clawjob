@@ -353,11 +353,23 @@ export async function deleteCVVersion(
   const wasDefault = doc.data()?.isDefault === true;
   await col.doc(cvId).delete();
 
-  // If deleted CV was default, set the newest remaining as default
+  // If deleted CV was default, set the newest remaining as default and sync profile
   if (wasDefault) {
     const remaining = await col.orderBy("uploadedAt", "desc").limit(1).get();
     if (!remaining.empty) {
-      await remaining.docs[0].ref.update({ isDefault: true });
+      const newDefault = remaining.docs[0];
+      const newData = newDefault.data();
+      await newDefault.ref.update({ isDefault: true });
+      await usersCol.doc(userId).update({
+        resumeURL: newData.url,
+        resumeFileName: newData.fileName,
+      });
+    } else {
+      // No CVs left — clear profile's legacy fields
+      await usersCol.doc(userId).update({
+        resumeURL: "",
+        resumeFileName: "",
+      });
     }
   }
 }
@@ -392,5 +404,13 @@ export async function setDefaultCV(
   const batch = adminDb.batch();
   snap.docs.forEach((d) => batch.update(d.ref, { isDefault: false }));
   batch.update(col.doc(cvId), { isDefault: true });
+
+  // Sync user profile's legacy resumeURL/resumeFileName
+  const cvData = doc.data()!;
+  batch.update(usersCol.doc(userId), {
+    resumeURL: cvData.url,
+    resumeFileName: cvData.fileName,
+  });
+
   await batch.commit();
 }

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import { auth, storage } from "@/lib/firebase-client";
+import { useToast } from "@/components/Toast";
 import type { JobCard, CVVersion } from "@/lib/types";
 
 interface CVPreviewModalProps {
@@ -12,9 +19,17 @@ interface CVPreviewModalProps {
   resumeURL?: string;
   resumeFileName?: string;
   cvVersions?: CVVersion[];
+  onCvUploaded?: () => void;
 }
 
 const MAX_NOTE_LENGTH = 500;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 
 export default function CVPreviewModal({
   job,
@@ -24,31 +39,170 @@ export default function CVPreviewModal({
   resumeURL,
   resumeFileName,
   cvVersions = [],
+  onCvUploaded,
 }: CVPreviewModalProps) {
+  const { showToast } = useToast();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Local CV state so modal updates immediately after upload
+  const [localCvVersions, setLocalCvVersions] = useState<CVVersion[]>(cvVersions);
+  const [localResumeURL, setLocalResumeURL] = useState(resumeURL);
+  const [localResumeFileName, setLocalResumeFileName] = useState(resumeFileName);
+
+  // Sync local state when props change
+  useEffect(() => {
+    setLocalCvVersions(cvVersions);
+  }, [cvVersions]);
+  useEffect(() => {
+    setLocalResumeURL(resumeURL);
+  }, [resumeURL]);
+  useEffect(() => {
+    setLocalResumeFileName(resumeFileName);
+  }, [resumeFileName]);
 
   // Pre-select the default CV when modal opens
   useEffect(() => {
-    if (isOpen && cvVersions.length > 0) {
-      const defaultCv = cvVersions.find((cv) => cv.isDefault);
-      setSelectedCvId(defaultCv?.id ?? cvVersions[0].id);
+    if (isOpen && localCvVersions.length > 0) {
+      const defaultCv = localCvVersions.find((cv) => cv.isDefault);
+      setSelectedCvId(defaultCv?.id ?? localCvVersions[0].id);
     } else {
       setSelectedCvId(null);
     }
-  }, [isOpen, cvVersions]);
+  }, [isOpen, localCvVersions]);
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const ext = file.name.toLowerCase().replace(/^.*(\.[^.]+)$/, "$1");
+      const validType =
+        ACCEPTED_MIME_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext);
+
+      if (!validType) {
+        showToast("Please upload a PDF, DOC, or DOCX file", "error");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        showToast("File must be under 5MB", "error");
+        return;
+      }
+
+      const storageRef = ref(
+        storage,
+        `resumes/${user.uid}/${Date.now()}_${file.name}`
+      );
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      setUploadProgress(0);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const pct = Math.round(
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          );
+          setUploadProgress(pct);
+        },
+        (error) => {
+          console.error("Upload error:", error);
+          setUploadProgress(null);
+          showToast("Upload failed. Please try again.", "error");
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            const token = await user.getIdToken();
+
+            const name = file.name.replace(/\.[^.]+$/, "");
+
+            // Save as CV version
+            const res = await fetch("/api/user/cvs", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                name,
+                fileName: file.name,
+                url: downloadURL,
+              }),
+            });
+            if (!res.ok) throw new Error("Failed to save");
+
+            const savedCv: CVVersion = await res.json();
+
+            // Also update legacy resumeURL for backward compat
+            await fetch("/api/user", {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                resumeURL: downloadURL,
+                resumeFileName: file.name,
+              }),
+            });
+
+            // Update local state immediately
+            setLocalCvVersions((prev) => [...prev, savedCv]);
+            setLocalResumeURL(downloadURL);
+            setLocalResumeFileName(file.name);
+            setSelectedCvId(savedCv.id);
+
+            // Notify parent to refresh
+            onCvUploaded?.();
+
+            showToast("CV uploaded!", "success");
+          } catch {
+            showToast("Failed to save CV", "error");
+          } finally {
+            setUploadProgress(null);
+          }
+        }
+      );
+    },
+    [showToast, onCvUploaded]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileUpload(file);
+    },
+    [handleFileUpload]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  }, []);
 
   if (!job) return null;
 
   const charCount = message.length;
   const charRatio = charCount / MAX_NOTE_LENGTH;
-  const selectedCv = cvVersions.find((cv) => cv.id === selectedCvId);
+  const selectedCv = localCvVersions.find((cv) => cv.id === selectedCvId);
 
   // Determine what CV info to show: selected version, or legacy single CV
-  const displayUrl = selectedCv?.url ?? resumeURL;
-  const displayName = selectedCv?.name ?? resumeFileName;
-  const hasAnyCv = cvVersions.length > 0 || (resumeURL && resumeFileName);
+  const displayUrl = selectedCv?.url ?? localResumeURL;
+  const displayName = selectedCv?.name ?? localResumeFileName;
+  const hasAnyCv = localCvVersions.length > 0 || (localResumeURL && localResumeFileName);
+  const isUploading = uploadProgress !== null;
 
   return (
     <AnimatePresence>
@@ -118,14 +272,14 @@ export default function CVPreviewModal({
                 Your CV
               </h4>
 
-              {cvVersions.length > 1 ? (
+              {localCvVersions.length > 1 ? (
                 <div className="flex flex-col gap-2">
                   <select
                     value={selectedCvId ?? ""}
                     onChange={(e) => setSelectedCvId(e.target.value)}
                     className="w-full appearance-none rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-emerald-500"
                   >
-                    {cvVersions.map((cv) => (
+                    {localCvVersions.map((cv) => (
                       <option key={cv.id} value={cv.id}>
                         {cv.name}{cv.isDefault ? " (Default)" : ""}
                       </option>
@@ -174,12 +328,65 @@ export default function CVPreviewModal({
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-800/50 px-4 py-3">
-                  <svg className="h-5 w-5 shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                  <p className="text-sm text-zinc-500">No CV uploaded. Upload one in your profile.</p>
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    disabled={isUploading}
+                    className={`flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors ${
+                      dragOver
+                        ? "border-emerald-500 bg-emerald-500/10"
+                        : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800"
+                    } ${isUploading ? "pointer-events-none opacity-60" : "cursor-pointer"}`}
+                  >
+                    <svg
+                      className={`h-8 w-8 ${dragOver ? "text-emerald-400" : "text-zinc-500"}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p className="text-sm font-medium text-zinc-300">
+                      {dragOver ? "Drop your CV here" : "Upload your CV"}
+                    </p>
+                    <p className="text-xs text-zinc-500">PDF, DOC, or DOCX (max 5MB)</p>
+                  </button>
+
+                  {/* Upload progress bar */}
+                  {isUploading && (
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-200"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

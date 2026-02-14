@@ -59,7 +59,7 @@ export default function ProfilePage() {
   const [dangerousMode, setDangerousMode] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
-  const [cvName, setCvName] = useState("");
+
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
   const [renamingCvId, setRenamingCvId] = useState<string | null>(null);
   const [renamingCvValue, setRenamingCvValue] = useState("");
@@ -122,7 +122,11 @@ export default function ProfilePage() {
     async (file: File) => {
       if (!user) return;
 
-      if (!ACCEPTED_TYPES.includes(file.type)) {
+      const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
+      const ext = file.name.toLowerCase().replace(/^.*(\.[^.]+)$/, "$1");
+      const validType = ACCEPTED_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext);
+
+      if (!validType) {
         showToast("Please upload a PDF, DOC, or DOCX file", "error");
         return;
       }
@@ -154,8 +158,8 @@ export default function ProfilePage() {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const token = await getToken();
 
-            // Save as CV version
-            const name = cvName.trim() || file.name.replace(/\.[^.]+$/, "");
+            // Derive CV name from filename (strip extension)
+            const name = file.name.replace(/\.[^.]+$/, "");
             const res = await fetch("/api/user/cvs", {
               method: "POST",
               headers: {
@@ -184,7 +188,6 @@ export default function ProfilePage() {
             });
 
             await fetchCVVersions();
-            setCvName("");
             showToast("CV uploaded!", "success");
           } catch {
             showToast("Failed to save CV", "error");
@@ -194,7 +197,7 @@ export default function ProfilePage() {
         }
       );
     },
-    [user, getToken, showToast, cvName, fetchCVVersions]
+    [user, getToken, showToast, fetchCVVersions]
   );
 
   const handleDeleteCV = useCallback(
@@ -218,7 +221,7 @@ export default function ProfilePage() {
           // File may not exist — ignore
         }
 
-        await fetchCVVersions();
+        await Promise.all([fetchCVVersions(), fetchProfile()]);
         showToast("CV removed", "success");
       } catch {
         showToast("Failed to remove CV", "error");
@@ -226,7 +229,7 @@ export default function ProfilePage() {
         setDeletingCvId(null);
       }
     },
-    [user, getToken, showToast, fetchCVVersions]
+    [user, getToken, showToast, fetchCVVersions, fetchProfile]
   );
 
   const handleSetDefaultCV = useCallback(
@@ -242,13 +245,13 @@ export default function ProfilePage() {
           body: JSON.stringify({ isDefault: true }),
         });
         if (!res.ok) throw new Error("Failed to set default");
-        await fetchCVVersions();
+        await Promise.all([fetchCVVersions(), fetchProfile()]);
         showToast("Default CV updated", "success");
       } catch {
         showToast("Failed to set default CV", "error");
       }
     },
-    [getToken, showToast, fetchCVVersions]
+    [getToken, showToast, fetchCVVersions, fetchProfile]
   );
 
   const handleRenameCV = useCallback(
@@ -647,14 +650,6 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   )}
-
-                  {/* CV name input */}
-                  <input
-                    value={cvName}
-                    onChange={(e) => setCvName(e.target.value)}
-                    placeholder="CV name (e.g. Frontend CV, Backend CV)"
-                    className="mb-3 w-full rounded-lg border border-zinc-700/50 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
-                  />
 
                   {/* Drop zone */}
                   <div
