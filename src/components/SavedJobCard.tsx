@@ -7,12 +7,16 @@ interface SavedJobCardProps {
   job: JobCard;
   onApply: (job: JobCard) => void;
   onRemove: (jobId: string) => void;
+  onSendCV: (job: JobCard) => void;
+  hasResume: boolean;
 }
 
 export default function SavedJobCard({
   job,
   onApply,
   onRemove,
+  onSendCV,
+  hasResume,
 }: SavedJobCardProps) {
   const initials = job.manager.name
     .split(" ")
@@ -59,6 +63,27 @@ export default function SavedJobCard({
 
         {/* Action buttons */}
         <div className="flex shrink-0 items-center gap-2">
+          <motion.button
+            onClick={() => onSendCV(job)}
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="flex items-center gap-1">
+              <svg
+                className="h-3 w-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              Send CV
+            </span>
+          </motion.button>
           <motion.button
             onClick={() => onApply(job)}
             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"

@@ -29,7 +29,7 @@ export default function ManagerHero({ manager, companyLogo, onTap }: ManagerHero
   return (
     <motion.div
       className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
-      style={{ height: "70vh", cursor: onTap ? "pointer" : undefined }}
+      style={{ height: "calc(100dvh - 340px)", minHeight: "200px", maxHeight: "400px", cursor: onTap ? "pointer" : undefined }}
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}

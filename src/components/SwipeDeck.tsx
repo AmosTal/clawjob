@@ -45,6 +45,13 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
   const opacity = useTransform(x, [-300, -100, 0, 100, 300], [0, 1, 1, 1, 0]);
 
+  // Side indicator transforms — left (skip)
+  const skipIndicatorOpacity = useTransform(x, [0, -100], [0.3, 1]);
+  const skipIndicatorScale = useTransform(x, [0, -100], [1, 1.2]);
+  // Side indicator transforms — right (apply)
+  const applyIndicatorOpacity = useTransform(x, [0, 100], [0.3, 1]);
+  const applyIndicatorScale = useTransform(x, [0, 100], [1, 1.2]);
+
   const advance = useCallback(() => {
     setExitDirection(null);
     setCurrentIndex((i) => i + 1);
@@ -218,36 +225,86 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
         </div>
       </div>
 
-      {/* Swipeable card */}
-      <div className="relative">
+      {/* Swipeable card with side indicators */}
+      <div className="flex items-center gap-1">
+        {/* Left indicator — Skip */}
         <motion.div
-          key={job.id}
-          className="touch-none"
-          style={{ x, rotate, opacity }}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.9}
-          onDragEnd={handleDragEnd}
-          animate={
-            exitDirection
-              ? {
-                  x: exitDirection === "right" ? 500 : -500,
-                  rotate: exitDirection === "right" ? 20 : -20,
-                  opacity: 0,
-                }
-              : {}
-          }
-          transition={exitDirection ? { duration: 0.35, ease: "easeIn" } : {}}
-          onAnimationComplete={() => {
-            if (exitDirection) advance();
-          }}
+          className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
+          style={{ opacity: skipIndicatorOpacity, scale: skipIndicatorScale }}
         >
-          <ManagerHero
-            manager={manager}
-            companyLogo={job.companyLogo}
-            onTap={() => setDetailOpen(true)}
-          />
-          <SwipeOverlay x={x} />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-red-500"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500">
+            Skip
+          </span>
+        </motion.div>
+
+        {/* Center — Draggable card */}
+        <div className="relative min-w-0 flex-1">
+          <motion.div
+            key={job.id}
+            className="touch-none"
+            style={{ x, rotate, opacity }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.9}
+            onDragEnd={handleDragEnd}
+            animate={
+              exitDirection
+                ? {
+                    x: exitDirection === "right" ? 500 : -500,
+                    rotate: exitDirection === "right" ? 20 : -20,
+                    opacity: 0,
+                  }
+                : {}
+            }
+            transition={exitDirection ? { duration: 0.35, ease: "easeIn" } : {}}
+            onAnimationComplete={() => {
+              if (exitDirection) advance();
+            }}
+          >
+            <ManagerHero
+              manager={manager}
+              companyLogo={job.companyLogo}
+              onTap={() => setDetailOpen(true)}
+            />
+            <SwipeOverlay x={x} />
+          </motion.div>
+        </div>
+
+        {/* Right indicator — Apply */}
+        <motion.div
+          className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
+          style={{ opacity: applyIndicatorOpacity, scale: applyIndicatorScale }}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-emerald-500"
+          >
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500">
+            Apply
+          </span>
         </motion.div>
       </div>
 
@@ -258,7 +315,7 @@ export default function SwipeDeck({ jobs, loading }: SwipeDeckProps) {
         onApply={() => dismiss("right")}
       />
 
-      {/* HR Flip Card */}
+      {/* HR Contact Bar */}
       <HRFlipCard hr={hr} companyLogo={job.companyLogo} />
 
       {/* Job Detail Sheet */}

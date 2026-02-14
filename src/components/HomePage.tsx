@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import RoleSelectScreen from "@/components/RoleSelectScreen";
 import SwipeDeck from "@/components/SwipeDeck";
 import AppShell from "@/components/AppShell";
+import FilterBar from "@/components/FilterBar";
+import type { Filters } from "@/components/FilterBar";
 import { auth } from "@/lib/firebase-client";
 import type { JobCard, Application } from "@/lib/types";
 
@@ -42,6 +44,32 @@ export default function HomePage() {
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [totalJobs, setTotalJobs] = useState(0);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const [filters, setFilters] = useState<Filters>({
+    remote: false,
+    location: null,
+    tags: [],
+  });
+
+  // Apply filters client-side
+  const displayedJobs = useMemo(() => {
+    let displayed = jobs;
+    if (filters.remote)
+      displayed = displayed.filter((j) =>
+        j.location?.toLowerCase().includes("remote"),
+      );
+    if (filters.location)
+      displayed = displayed.filter((j) =>
+        j.location?.includes(filters.location!),
+      );
+    if (filters.tags.length)
+      displayed = displayed.filter((j) =>
+        (j.tags ?? []).some((t) => filters.tags.includes(t)),
+      );
+    return displayed;
+  }, [jobs, filters]);
+
+  // Stable key to force SwipeDeck remount when filters change
+  const filterKey = `${filters.remote}-${filters.location}-${filters.tags.join(",")}`;
 
   useEffect(() => {
     if (user && role === "employer") {
@@ -125,15 +153,24 @@ export default function HomePage() {
               className="mb-3 flex justify-center"
             >
               <span className="rounded-full bg-zinc-800/80 px-3 py-1 text-[11px] font-medium text-zinc-400">
-                {jobs.length} of {totalJobs} jobs remaining
+                {displayedJobs.length} of {totalJobs} jobs remaining
               </span>
             </motion.div>
+          )}
+
+          {/* Filter bar */}
+          {!loadingJobs && jobs.length > 0 && (
+            <FilterBar
+              jobs={jobs}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
           )}
 
           {loadingJobs ? (
             <HomeSkeleton />
           ) : (
-            <SwipeDeck jobs={jobs} loading={false} />
+            <SwipeDeck key={filterKey} jobs={displayedJobs} loading={false} />
           )}
         </div>
       </div>

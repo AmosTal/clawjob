@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { auth } from "@/lib/firebase-client";
-import type { JobCard } from "@/lib/types";
+import type { JobCard, UserProfile } from "@/lib/types";
 import SavedJobCard from "@/components/SavedJobCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -15,6 +15,7 @@ function SavedPageContent() {
   const { showToast } = useToast();
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -24,9 +25,18 @@ function SavedPageContent() {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch("/api/saved", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [res, profileRes] = await Promise.all([
+        fetch("/api/saved", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      if (profileRes.ok) {
+        const profileData: UserProfile = await profileRes.json();
+        setProfile(profileData);
+      }
       if (!res.ok) throw new Error("Failed to fetch saved jobs");
       const savedIds: string[] = await res.json();
 
@@ -105,6 +115,14 @@ function SavedPageContent() {
     }
   };
 
+  const handleSendCV = (job: JobCard) => {
+    if (!profile?.resumeURL) {
+      showToast("Upload your CV first in your profile", "error");
+      return;
+    }
+    showToast(`${job.company} hiring manager will receive your CV!`, "success");
+  };
+
   return (
     <div className="flex min-h-dvh justify-center bg-zinc-950">
       <div className="w-full max-w-[430px] px-4 py-6">
@@ -171,6 +189,8 @@ function SavedPageContent() {
                   job={job}
                   onApply={handleApply}
                   onRemove={handleRemove}
+                  onSendCV={handleSendCV}
+                  hasResume={!!profile?.resumeURL}
                 />
               ))}
             </div>

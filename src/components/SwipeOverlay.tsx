@@ -18,7 +18,7 @@ export default function SwipeOverlay({ x }: SwipeOverlayProps) {
         style={{ opacity: applyOpacity }}
       >
         <span
-          className="rounded-lg border-4 border-emerald-400 px-6 py-2 text-4xl font-extrabold uppercase tracking-widest text-emerald-400"
+          className="rounded-lg border-4 border-emerald-400 px-4 py-1.5 text-2xl font-extrabold uppercase tracking-widest text-emerald-400"
           style={{ transform: "rotate(-12deg)" }}
         >
           Apply
@@ -31,7 +31,7 @@ export default function SwipeOverlay({ x }: SwipeOverlayProps) {
         style={{ opacity: skipOpacity }}
       >
         <span
-          className="rounded-lg border-4 border-red-500 px-6 py-2 text-4xl font-extrabold uppercase tracking-widest text-red-500"
+          className="rounded-lg border-4 border-red-500 px-4 py-1.5 text-2xl font-extrabold uppercase tracking-widest text-red-500"
           style={{ transform: "rotate(12deg)" }}
         >
           Skip
