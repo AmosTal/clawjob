@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   motion,
   useMotionValue,
@@ -43,6 +43,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     null
   );
   const [detailOpen, setDetailOpen] = useState(false);
+  const isDragging = useRef(false);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
@@ -164,6 +165,10 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     [applyToJob, saveJob, dangerousMode, currentIndex, jobs, x]
   );
 
+  const handleDragStart = useCallback(() => {
+    isDragging.current = true;
+  }, []);
+
   const handleDragEnd = useCallback(
     (_: unknown, info: PanInfo) => {
       if (info.offset.x > SWIPE_THRESHOLD) {
@@ -173,6 +178,10 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
       } else {
         x.set(0);
       }
+      // Reset after a short delay so the subsequent click event is suppressed
+      setTimeout(() => {
+        isDragging.current = false;
+      }, 100);
     },
     [dismiss, x]
   );
@@ -267,6 +276,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.9}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               initial={{ scale: 0.92, opacity: 0 }}
               animate={
@@ -291,7 +301,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
                 manager={manager}
                 company={job.company}
                 companyLogo={job.companyLogo}
-                onTap={() => setDetailOpen(true)}
+                onTap={() => { if (!isDragging.current) setDetailOpen(true); }}
               />
               <SwipeOverlay x={x} dangerousMode={dangerousMode} />
             </motion.div>

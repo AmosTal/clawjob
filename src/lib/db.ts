@@ -362,6 +362,23 @@ export async function deleteCVVersion(
   }
 }
 
+export async function updateCVVersion(
+  userId: string,
+  cvId: string,
+  data: { name?: string }
+): Promise<void> {
+  const col = cvVersionsCol(userId);
+  const doc = await col.doc(cvId).get();
+  if (!doc.exists) throw new Error("CV not found");
+
+  const updates: Record<string, string> = {};
+  if (data.name !== undefined) updates.name = data.name;
+
+  if (Object.keys(updates).length > 0) {
+    await col.doc(cvId).update(updates);
+  }
+}
+
 export async function setDefaultCV(
   userId: string,
   cvId: string

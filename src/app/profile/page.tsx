@@ -61,6 +61,8 @@ export default function ProfilePage() {
   const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
   const [cvName, setCvName] = useState("");
   const [deletingCvId, setDeletingCvId] = useState<string | null>(null);
+  const [renamingCvId, setRenamingCvId] = useState<string | null>(null);
+  const [renamingCvValue, setRenamingCvValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getToken = useCallback(async () => {
@@ -244,6 +246,36 @@ export default function ProfilePage() {
         showToast("Default CV updated", "success");
       } catch {
         showToast("Failed to set default CV", "error");
+      }
+    },
+    [getToken, showToast, fetchCVVersions]
+  );
+
+  const handleRenameCV = useCallback(
+    async (cvId: string, newName: string) => {
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        setRenamingCvId(null);
+        return;
+      }
+
+      try {
+        const token = await getToken();
+        const res = await fetch(`/api/user/cvs/${cvId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name: trimmed }),
+        });
+        if (!res.ok) throw new Error("Failed to rename");
+        await fetchCVVersions();
+        showToast("CV renamed", "success");
+      } catch {
+        showToast("Failed to rename CV", "error");
+      } finally {
+        setRenamingCvId(null);
       }
     },
     [getToken, showToast, fetchCVVersions]
@@ -522,9 +554,44 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex min-w-0 flex-1 flex-col">
                             <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-medium text-white">
-                                {cv.name}
-                              </span>
+                              {renamingCvId === cv.id ? (
+                                <input
+                                  value={renamingCvValue}
+                                  onChange={(e) => setRenamingCvValue(e.target.value)}
+                                  onBlur={() => handleRenameCV(cv.id, renamingCvValue)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleRenameCV(cv.id, renamingCvValue);
+                                    if (e.key === "Escape") setRenamingCvId(null);
+                                  }}
+                                  autoFocus
+                                  className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-700 px-2 py-0.5 text-sm font-medium text-white outline-none focus:border-emerald-500"
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setRenamingCvId(cv.id);
+                                    setRenamingCvValue(cv.name);
+                                  }}
+                                  className="group/rename flex min-w-0 items-center gap-1"
+                                  title="Click to rename"
+                                >
+                                  <span className="truncate text-sm font-medium text-white">
+                                    {cv.name}
+                                  </span>
+                                  <svg
+                                    className="h-3 w-3 shrink-0 text-zinc-500 opacity-0 transition-opacity group-hover/rename:opacity-100"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                              )}
                               {cv.isDefault && (
                                 <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-400">
                                   Default

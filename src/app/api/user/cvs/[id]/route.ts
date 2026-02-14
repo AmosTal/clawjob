@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { deleteCVVersion, setDefaultCV } from "@/lib/db";
+import { deleteCVVersion, setDefaultCV, updateCVVersion } from "@/lib/db";
 
 export async function DELETE(
   request: Request,
@@ -39,13 +39,20 @@ export async function PATCH(
 
     if (body.isDefault === true) {
       await setDefaultCV(user.uid, id);
-      return NextResponse.json({ ok: true });
     }
 
-    return NextResponse.json(
-      { error: "No valid update fields" },
-      { status: 400 }
-    );
+    if (typeof body.name === "string" && body.name.trim()) {
+      await updateCVVersion(user.uid, id, { name: body.name.trim() });
+    }
+
+    if (body.isDefault !== true && !(typeof body.name === "string" && body.name.trim())) {
+      return NextResponse.json(
+        { error: "No valid update fields" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to update CV";

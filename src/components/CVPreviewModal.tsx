@@ -65,7 +65,7 @@ export default function CVPreviewModal({
 
           {/* Bottom sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[430px] rounded-t-2xl border-t border-zinc-700/50 bg-zinc-900 px-4 pb-8 pt-4"
+            className="fixed inset-x-0 bottom-[70px] z-50 mx-auto max-h-[85vh] max-w-[430px] overflow-y-auto rounded-t-2xl border-t border-zinc-700/50 bg-zinc-900 px-4 pb-8 pt-4"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
