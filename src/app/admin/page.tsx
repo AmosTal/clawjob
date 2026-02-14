@@ -77,7 +77,6 @@ export default function AdminDashboard() {
         </svg>
       ),
       color: "emerald",
-      change: "+12%",
     },
     {
       label: "Total Users",
@@ -89,7 +88,6 @@ export default function AdminDashboard() {
         </svg>
       ),
       color: "blue",
-      change: "+8%",
     },
     {
       label: "Applications",
@@ -103,7 +101,6 @@ export default function AdminDashboard() {
         </svg>
       ),
       color: "violet",
-      change: "+24%",
     },
     {
       label: "Employers",
@@ -115,7 +112,6 @@ export default function AdminDashboard() {
         </svg>
       ),
       color: "amber",
-      change: "+5%",
     },
   ];
 
@@ -167,9 +163,6 @@ export default function AdminDashboard() {
                 <div className={`p-2.5 rounded-lg ${c.bg}`}>
                   <span className={c.text}>{card.icon}</span>
                 </div>
-                <span className="text-xs text-emerald-500 font-medium">
-                  {card.change}
-                </span>
               </div>
               <p className="mt-4 text-2xl font-bold text-zinc-100">
                 {card.value.toLocaleString()}
@@ -192,36 +185,16 @@ export default function AdminDashboard() {
           <h2 className="text-sm font-semibold text-zinc-300 mb-4">
             Application Trends
           </h2>
-          <div className="flex items-end gap-2 h-40">
-            {[35, 45, 30, 55, 70, 60, 80, 65, 90, 75, 85, 95].map(
-              (h, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ height: 0 }}
-                  animate={{ height: `${h}%` }}
-                  transition={{ delay: 0.5 + i * 0.05, duration: 0.4 }}
-                  className="flex-1 bg-emerald-500/20 rounded-t hover:bg-emerald-500/30 transition-colors relative group"
-                >
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {h}
-                  </div>
-                </motion.div>
-              )
-            )}
-          </div>
-          <div className="flex justify-between mt-2 text-[10px] text-zinc-600">
-            <span>Jan</span>
-            <span>Feb</span>
-            <span>Mar</span>
-            <span>Apr</span>
-            <span>May</span>
-            <span>Jun</span>
-            <span>Jul</span>
-            <span>Aug</span>
-            <span>Sep</span>
-            <span>Oct</span>
-            <span>Nov</span>
-            <span>Dec</span>
+          <div className="flex flex-col items-center justify-center h-40 text-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-600 mb-3">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <p className="text-sm font-medium text-zinc-400">
+              Analytics coming soon
+            </p>
+            <p className="text-xs text-zinc-600 mt-1">
+              Trend data will appear here as usage grows
+            </p>
           </div>
         </motion.div>
 

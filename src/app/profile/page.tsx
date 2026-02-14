@@ -3,13 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
-import { auth, storage } from "@/lib/firebase-client";
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
+import { auth } from "@/lib/firebase-client";
 import type { UserProfile, Application, CVVersion } from "@/lib/types";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -64,8 +58,7 @@ export default function ProfilePage() {
   const [renamingCvId, setRenamingCvId] = useState<string | null>(null);
   const [renamingCvValue, setRenamingCvValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
-  const uploadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const getToken = useCallback(async () => {
     return await auth.currentUser?.getIdToken();
@@ -120,34 +113,15 @@ export default function ProfilePage() {
     }
   }, [getToken]);
 
-  const clearUploadTimeout = useCallback(() => {
-    if (uploadTimeoutRef.current) {
-      clearTimeout(uploadTimeoutRef.current);
-      uploadTimeoutRef.current = null;
-    }
-  }, []);
-
   const resetUploadState = useCallback(() => {
     setUploadProgress(null);
-    uploadTaskRef.current = null;
-    clearUploadTimeout();
+    abortControllerRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [clearUploadTimeout]);
-
-  const resetUploadTimeout = useCallback(() => {
-    clearUploadTimeout();
-    uploadTimeoutRef.current = setTimeout(() => {
-      if (uploadTaskRef.current) {
-        uploadTaskRef.current.cancel();
-        resetUploadState();
-        showToast("Upload timed out — no progress for 15 seconds", "error");
-      }
-    }, 15_000);
-  }, [clearUploadTimeout, resetUploadState, showToast]);
+  }, []);
 
   const handleCancelUpload = useCallback(() => {
-    if (uploadTaskRef.current) {
-      uploadTaskRef.current.cancel();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
     resetUploadState();
     showToast("Upload cancelled", "info");
@@ -170,85 +144,81 @@ export default function ProfilePage() {
         return;
       }
 
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setUploadProgress(0);
+
       try {
-        const storageRef = ref(storage, `resumes/${user.uid}/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        uploadTaskRef.current = uploadTask;
+        const token = await getToken();
+        const formData = new FormData();
+        formData.append("file", file);
 
-        setUploadProgress(0);
-        resetUploadTimeout();
+        // Show indeterminate progress (pulse between 10-90)
+        setUploadProgress(30);
 
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const pct = Math.round(
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-            );
-            setUploadProgress(pct);
-            resetUploadTimeout();
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+          signal: abortController.signal,
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
+
+        setUploadProgress(80);
+
+        const { url: downloadURL, fileName } = await res.json();
+
+        // Derive CV name from filename (strip extension)
+        const name = file.name.replace(/\.[^.]+$/, "");
+        const cvRes = await fetch("/api/user/cvs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          (error) => {
-            console.error("Upload error:", error);
-            resetUploadState();
-            if (error.code !== "storage/canceled") {
-              showToast("Upload failed. Please try again.", "error");
-            }
+          body: JSON.stringify({ name, fileName, url: downloadURL }),
+        });
+        if (!cvRes.ok) throw new Error("Failed to save CV record");
+
+        // Also update legacy resumeURL for backward compat
+        await fetch("/api/user", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          async () => {
-            clearUploadTimeout();
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              const token = await getToken();
+          body: JSON.stringify({
+            resumeURL: downloadURL,
+            resumeFileName: fileName,
+          }),
+        });
 
-              // Derive CV name from filename (strip extension)
-              const name = file.name.replace(/\.[^.]+$/, "");
-              const res = await fetch("/api/user/cvs", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  name,
-                  fileName: file.name,
-                  url: downloadURL,
-                }),
-              });
-              if (!res.ok) throw new Error("Failed to save");
-
-              // Also update legacy resumeURL for backward compat
-              await fetch("/api/user", {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  resumeURL: downloadURL,
-                  resumeFileName: file.name,
-                }),
-              });
-
-              await fetchCVVersions();
-              showToast("CV uploaded!", "success");
-            } catch {
-              showToast("Failed to save CV", "error");
-            } finally {
-              resetUploadState();
-            }
-          }
-        );
+        setUploadProgress(100);
+        await fetchCVVersions();
+        showToast("CV uploaded!", "success");
       } catch (error) {
-        console.error("Failed to start upload:", error);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // User cancelled — already handled
+          return;
+        }
+        console.error("Upload error:", error);
+        showToast(
+          error instanceof Error ? error.message : "Upload failed. Please try again.",
+          "error"
+        );
+      } finally {
         resetUploadState();
-        showToast("Failed to start upload. Please try again.", "error");
       }
     },
-    [user, getToken, showToast, fetchCVVersions, resetUploadTimeout, clearUploadTimeout, resetUploadState]
+    [user, getToken, showToast, fetchCVVersions, resetUploadState]
   );
 
   const handleDeleteCV = useCallback(
-    async (cvId: string, fileName: string) => {
+    async (cvId: string, _fileName: string) => {
       if (!user) return;
       setDeletingCvId(cvId);
 
@@ -259,14 +229,6 @@ export default function ProfilePage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to delete");
-
-        // Try to clean up storage
-        try {
-          const storageRef = ref(storage, `resumes/${user.uid}/${fileName}`);
-          await deleteObject(storageRef);
-        } catch {
-          // File may not exist — ignore
-        }
 
         await Promise.all([fetchCVVersions(), fetchProfile()]);
         showToast("CV removed", "success");
@@ -506,6 +468,27 @@ export default function ProfilePage() {
                 <p className="text-sm text-zinc-500">
                   {profile?.email || user.email}
                 </p>
+
+                {/* Default CV indicator */}
+                {profile?.resumeFileName && (
+                  <div className="flex items-center gap-1.5 rounded-full border border-emerald-800/50 bg-emerald-500/5 px-3 py-1">
+                    <svg
+                      className="h-3.5 w-3.5 text-emerald-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span className="text-xs font-medium text-emerald-400">
+                      {profile.resumeFileName}
+                    </span>
+                  </div>
+                )}
               </motion.div>
 
               {/* Stats Row */}
@@ -751,12 +734,13 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  {/* Upload progress bar */}
+                  {/* Upload progress */}
                   {uploadProgress !== null && (
                     <div className="mt-3">
                       <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-xs text-zinc-400">
-                          Uploading... {uploadProgress}%
+                        <span className="flex items-center gap-2 text-xs text-zinc-400">
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border border-emerald-400 border-t-transparent" />
+                          Uploading...
                         </span>
                         <button
                           onClick={(e) => {
@@ -769,12 +753,7 @@ export default function ProfilePage() {
                         </button>
                       </div>
                       <div className="overflow-hidden rounded-full bg-zinc-800">
-                        <motion.div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${uploadProgress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
+                        <div className="h-1.5 animate-pulse rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: "100%" }} />
                       </div>
                     </div>
                   )}

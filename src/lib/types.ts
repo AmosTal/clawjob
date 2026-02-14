@@ -48,6 +48,7 @@ export interface Application {
   jobId: string;
   jobTitle: string;
   company: string;
+  companyLogo?: string;
   status:
     | "applied"
     | "reviewing"

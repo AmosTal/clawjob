@@ -44,6 +44,7 @@ export async function createApplication(
     jobId,
     jobTitle: job.role,
     company: job.company,
+    companyLogo: job.companyLogo ?? null,
     status: "applied",
     message: message ?? null,
     appliedAt: new Date().toISOString(),

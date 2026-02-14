@@ -150,14 +150,22 @@ export default function ApplicationCard({
       <div className="flex items-start justify-between gap-3">
         {/* Company initials + job info */}
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-xs font-bold text-zinc-400">
-            {application.company
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)}
-          </div>
+          {application.companyLogo ? (
+            <img
+              src={application.companyLogo}
+              alt={application.company}
+              className="h-10 w-10 shrink-0 rounded-xl bg-zinc-800 object-contain p-1"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-xs font-bold text-zinc-400">
+              {application.company
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-white">
               {application.jobTitle}

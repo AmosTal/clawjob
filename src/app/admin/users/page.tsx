@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 space-y-5"
+            className="relative bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 space-y-5"
           >
             {/* Close button */}
             <button

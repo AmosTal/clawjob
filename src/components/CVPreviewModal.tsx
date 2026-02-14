@@ -2,12 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from "firebase/storage";
-import { auth, storage } from "@/lib/firebase-client";
+import { auth } from "@/lib/firebase-client";
 import { useToast } from "@/components/Toast";
 import type { JobCard, CVVersion } from "@/lib/types";
 
@@ -48,8 +43,7 @@ export default function CVPreviewModal({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
-  const uploadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Local CV state so modal updates immediately after upload
   const [localCvVersions, setLocalCvVersions] = useState<CVVersion[]>(cvVersions);
@@ -77,34 +71,15 @@ export default function CVPreviewModal({
     }
   }, [isOpen, localCvVersions]);
 
-  const clearUploadTimeout = useCallback(() => {
-    if (uploadTimeoutRef.current) {
-      clearTimeout(uploadTimeoutRef.current);
-      uploadTimeoutRef.current = null;
-    }
-  }, []);
-
   const resetUploadState = useCallback(() => {
     setUploadProgress(null);
-    uploadTaskRef.current = null;
-    clearUploadTimeout();
+    abortControllerRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [clearUploadTimeout]);
-
-  const resetUploadTimeout = useCallback(() => {
-    clearUploadTimeout();
-    uploadTimeoutRef.current = setTimeout(() => {
-      if (uploadTaskRef.current) {
-        uploadTaskRef.current.cancel();
-        resetUploadState();
-        showToast("Upload timed out — no progress for 15 seconds", "error");
-      }
-    }, 15_000);
-  }, [clearUploadTimeout, resetUploadState, showToast]);
+  }, []);
 
   const handleCancelUpload = useCallback(() => {
-    if (uploadTaskRef.current) {
-      uploadTaskRef.current.cancel();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
     resetUploadState();
     showToast("Upload cancelled", "info");
@@ -128,95 +103,86 @@ export default function CVPreviewModal({
         return;
       }
 
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setUploadProgress(0);
+
       try {
-        const storageRef = ref(
-          storage,
-          `resumes/${user.uid}/${Date.now()}_${file.name}`
-        );
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        uploadTaskRef.current = uploadTask;
+        const token = await user.getIdToken();
+        const formData = new FormData();
+        formData.append("file", file);
 
-        setUploadProgress(0);
-        resetUploadTimeout();
+        setUploadProgress(30);
 
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const pct = Math.round(
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-            );
-            setUploadProgress(pct);
-            resetUploadTimeout();
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+          signal: abortController.signal,
+        });
+
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
+
+        setUploadProgress(70);
+
+        const { url: downloadURL, fileName } = await uploadRes.json();
+        const name = file.name.replace(/\.[^.]+$/, "");
+
+        // Save as CV version
+        const cvRes = await fetch("/api/user/cvs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          (error) => {
-            console.error("Upload error:", error);
-            resetUploadState();
-            if (error.code !== "storage/canceled") {
-              showToast("Upload failed. Please try again.", "error");
-            }
+          body: JSON.stringify({ name, fileName, url: downloadURL }),
+        });
+        if (!cvRes.ok) throw new Error("Failed to save CV record");
+
+        const savedCv: CVVersion = await cvRes.json();
+
+        // Also update legacy resumeURL for backward compat
+        await fetch("/api/user", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          async () => {
-            clearUploadTimeout();
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              const token = await user.getIdToken();
+          body: JSON.stringify({
+            resumeURL: downloadURL,
+            resumeFileName: fileName,
+          }),
+        });
 
-              const name = file.name.replace(/\.[^.]+$/, "");
+        setUploadProgress(100);
 
-              // Save as CV version
-              const res = await fetch("/api/user/cvs", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  name,
-                  fileName: file.name,
-                  url: downloadURL,
-                }),
-              });
-              if (!res.ok) throw new Error("Failed to save");
+        // Update local state immediately
+        setLocalCvVersions((prev) => [...prev, savedCv]);
+        setLocalResumeURL(downloadURL);
+        setLocalResumeFileName(fileName);
+        setSelectedCvId(savedCv.id);
 
-              const savedCv: CVVersion = await res.json();
+        // Notify parent to refresh
+        onCvUploaded?.();
 
-              // Also update legacy resumeURL for backward compat
-              await fetch("/api/user", {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  resumeURL: downloadURL,
-                  resumeFileName: file.name,
-                }),
-              });
-
-              // Update local state immediately
-              setLocalCvVersions((prev) => [...prev, savedCv]);
-              setLocalResumeURL(downloadURL);
-              setLocalResumeFileName(file.name);
-              setSelectedCvId(savedCv.id);
-
-              // Notify parent to refresh
-              onCvUploaded?.();
-
-              showToast("CV uploaded!", "success");
-            } catch {
-              showToast("Failed to save CV", "error");
-            } finally {
-              resetUploadState();
-            }
-          }
-        );
+        showToast("CV uploaded!", "success");
       } catch (error) {
-        console.error("Failed to start upload:", error);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        console.error("Upload error:", error);
+        showToast(
+          error instanceof Error ? error.message : "Upload failed. Please try again.",
+          "error"
+        );
+      } finally {
         resetUploadState();
-        showToast("Failed to start upload. Please try again.", "error");
       }
     },
-    [showToast, onCvUploaded, resetUploadTimeout, clearUploadTimeout, resetUploadState]
+    [showToast, onCvUploaded, resetUploadState]
   );
 
   const handleDrop = useCallback(
@@ -419,11 +385,14 @@ export default function CVPreviewModal({
                     <p className="text-xs text-zinc-500">PDF, DOC, or DOCX (max 5MB)</p>
                   </button>
 
-                  {/* Upload progress bar */}
+                  {/* Upload progress */}
                   {isUploading && (
                     <div className="mt-3">
                       <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Uploading... {uploadProgress}%</span>
+                        <span className="flex items-center gap-2">
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border border-emerald-400 border-t-transparent" />
+                          Uploading...
+                        </span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -435,10 +404,7 @@ export default function CVPreviewModal({
                         </button>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                        <div
-                          className="h-full rounded-full bg-emerald-500 transition-all duration-200"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
+                        <div className="h-full animate-pulse rounded-full bg-emerald-500" style={{ width: "100%" }} />
                       </div>
                     </div>
                   )}
