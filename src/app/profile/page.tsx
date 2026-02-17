@@ -169,8 +169,8 @@ export default function ProfilePage() {
             if (error.code === "storage/canceled") {
               return;
             }
-            console.error("Upload error:", error);
-            showToast("Upload failed.", "error");
+            console.error("Upload error:", error.code, error.message);
+            showToast(`Upload failed: ${error.code}`, "error");
             resetUploadState();
           },
           async () => {
