@@ -142,7 +142,6 @@ export async function getUserApplications(
 ): Promise<Application[]> {
   const snap = await applicationsCol
     .where("userId", "==", userId)
-    .orderBy("appliedAt", "desc")
     .get();
   return snap.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() }) as Application
