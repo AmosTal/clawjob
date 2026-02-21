@@ -10,6 +10,12 @@ const RECOMMENDED_SERVER_VARS = [
   "CRON_SECRET",
 ] as const;
 
+const OPTIONAL_API_VARS: Record<string, string> = {
+  RAPIDAPI_KEY: "JSearch scraper will be disabled — no RapidAPI job results",
+  PROXYCURL_API_KEY: "Manager enrichment will use placeholder data instead of LinkedIn profiles",
+  HUNTER_API_KEY: "Contact emails will be guessed from domain patterns instead of verified",
+};
+
 export function validateEnv(): void {
   const missing: string[] = [];
   for (const key of REQUIRED_SERVER_VARS) {
@@ -35,5 +41,11 @@ export function validateEnv(): void {
     logger.warn("Missing recommended environment variables", {
       vars: warnings,
     });
+  }
+
+  for (const [key, message] of Object.entries(OPTIONAL_API_VARS)) {
+    if (!process.env[key]) {
+      logger.warn(`Optional API key missing: ${key} — ${message}`);
+    }
   }
 }

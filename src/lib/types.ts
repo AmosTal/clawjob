@@ -1,9 +1,17 @@
+export type EnrichmentStatus = "pending" | "enriched" | "failed" | "failed_permanent";
+
+export type JobSource = "jsearch" | "adzuna" | "themuse" | "remotive" |
+  "greenhouse" | "lever" | "reed" | "remoteok" | "arbeitnow" | "employer" | "manual";
+
 export interface ManagerAsset {
   name: string;
   title: string;
   tagline: string;
   photo: string;
   video?: string;
+  linkedinUrl?: string;
+  enrichmentSource?: "linkedin" | "generated" | "placeholder";
+  isAIGenerated?: boolean;
 }
 
 export interface HRContact {
@@ -12,6 +20,9 @@ export interface HRContact {
   photo: string;
   email: string;
   phone?: string;
+  linkedinUrl?: string;
+  enrichmentSource?: "linkedin" | "generated" | "placeholder";
+  isAIGenerated?: boolean;
 }
 
 export interface JobCard {
@@ -31,6 +42,13 @@ export interface JobCard {
   culture?: string[];
   employerId?: string;
   createdAt?: string;
+  sourceUrl?: string;
+  applyUrl?: string;
+  sourceName?: string;
+  sourceId?: string;
+  enrichmentStatus?: EnrichmentStatus;
+  enrichedAt?: string;
+  postedAt?: string;
 }
 
 export interface CVVersion {
@@ -70,6 +88,6 @@ export interface UserProfile {
   resumeURL?: string;
   resumeFileName?: string;
   role?: "seeker" | "employer";
-  dangerousMode?: boolean;
+  quickApply?: boolean;
   createdAt: string;
 }

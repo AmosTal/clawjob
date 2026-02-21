@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import RoleSelectScreen from "@/components/RoleSelectScreen";
 import SwipeDeck from "@/components/SwipeDeck";
@@ -95,7 +95,6 @@ export default function HomePage() {
         if (cancelled) return;
 
         if (!jobsRes.ok) {
-          console.error("Jobs API returned", jobsRes.status);
           setLoadingJobs(false);
           return;
         }
@@ -111,8 +110,8 @@ export default function HomePage() {
 
         setTotalJobs(allJobs.length);
         setJobs(filtered);
-      } catch (err) {
-        console.error("Failed to load jobs:", err);
+      } catch {
+        // Job loading failed — user sees empty state
       } finally {
         if (!cancelled) setLoadingJobs(false);
       }
@@ -167,11 +166,26 @@ export default function HomePage() {
             />
           )}
 
-          {loadingJobs ? (
-            <HomeSkeleton />
-          ) : (
-            <SwipeDeck key={filterKey} jobs={displayedJobs} loading={false} dangerousMode={userProfile?.dangerousMode ?? false} />
-          )}
+          <AnimatePresence mode="wait">
+            {loadingJobs ? (
+              <motion.div
+                key="home-skeleton"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <HomeSkeleton />
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`deck-${filterKey}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <SwipeDeck jobs={displayedJobs} loading={false} quickApply={userProfile?.quickApply ?? false} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </AppShell>

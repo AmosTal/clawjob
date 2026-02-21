@@ -10,6 +10,7 @@ import {
   AnimatePresence,
 } from "framer-motion";
 import type { JobCard } from "@/lib/types";
+import { SWIPE_THRESHOLD } from "@/lib/constants";
 import { useToast } from "@/components/Toast";
 import { auth } from "@/lib/firebase-client";
 import ManagerHero from "./ManagerHero";
@@ -21,15 +22,13 @@ import EmptyState from "./EmptyState";
 import SkeletonCard from "./SkeletonCard";
 import JobDetailSheet from "./JobDetailSheet";
 
-const SWIPE_THRESHOLD = 120;
-
 interface SwipeDeckProps {
   jobs: JobCard[];
   loading?: boolean;
-  dangerousMode?: boolean;
+  quickApply?: boolean;
 }
 
-export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckProps) {
+export default function SwipeDeck({ jobs, loading, quickApply }: SwipeDeckProps) {
   const { showToast } = useToast();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,6 +36,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     null
   );
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [externallyOpenedIds, setExternallyOpenedIds] = useState<Set<string>>(new Set());
   const [applying, setApplying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(
@@ -44,6 +44,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
   );
   const [detailOpen, setDetailOpen] = useState(false);
   const isDragging = useRef(false);
+  const inFlightApplies = useRef(new Set<string>());
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
@@ -68,8 +69,33 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     x.set(0);
   }, [x]);
 
+  const isExternalJob = useCallback((job: JobCard) => {
+    return !job.employerId && !!(job.sourceUrl || job.applyUrl);
+  }, []);
+
+  const getExternalUrl = useCallback((job: JobCard) => {
+    return job.applyUrl || job.sourceUrl || "";
+  }, []);
+
+  const openExternalJob = useCallback(
+    (job: JobCard) => {
+      const url = getExternalUrl(job);
+      if (!url) return;
+      window.open(url, "_blank", "noopener,noreferrer");
+      setExternallyOpenedIds((prev) => new Set(prev).add(job.id));
+      showToast(`Opening ${job.sourceName || job.company}...`, "info");
+    },
+    [getExternalUrl, showToast]
+  );
+
   const applyToJob = useCallback(
     async (job: JobCard) => {
+      // External jobs: open URL instead of internal apply
+      if (isExternalJob(job)) {
+        openExternalJob(job);
+        return true;
+      }
+
       if (appliedIds.has(job.id) || applying) return true;
 
       setApplying(true);
@@ -93,8 +119,8 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
         showToast(`Applied to ${job.company}!`, "success");
 
         setConfetti({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
+          x: window.innerWidth * 0.65,
+          y: window.innerHeight * 0.55,
         });
 
         return true;
@@ -105,7 +131,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
         setApplying(false);
       }
     },
-    [appliedIds, applying, showToast]
+    [appliedIds, applying, showToast, isExternalJob, openExternalJob]
   );
 
   const saveJob = useCallback(
@@ -145,7 +171,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
   const dismiss = useCallback(
     async (direction: "left" | "right") => {
       if (direction === "right") {
-        if (dangerousMode) {
+        if (quickApply) {
           const job = jobs[currentIndex];
           const success = await applyToJob(job);
           if (!success) {
@@ -162,7 +188,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
       }
       setExitDirection(direction);
     },
-    [applyToJob, saveJob, dangerousMode, currentIndex, jobs, x]
+    [applyToJob, saveJob, quickApply, currentIndex, jobs, x]
   );
 
   const handleDragStart = useCallback(() => {
@@ -208,6 +234,8 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     title: `Manager at ${job.company}`,
     tagline: `Join us at ${job.company}`,
     photo: `https://ui-avatars.com/api/?name=HM&background=4F46E5&color=fff&size=128`,
+    isAIGenerated: false,
+    enrichmentSource: "placeholder" as const,
   };
 
   const hr = job.hr ?? {
@@ -215,16 +243,18 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
     title: `Talent Acquisition at ${job.company}`,
     photo: `https://ui-avatars.com/api/?name=HR&background=10B981&color=fff&size=128`,
     email: `careers@${job.company.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+    isAIGenerated: false,
+    enrichmentSource: "placeholder" as const,
   };
 
   return (
     <div className="flex flex-col gap-3">
       {/* Job header */}
       <div className="px-1 text-center">
-        <h1 className="text-lg font-bold leading-tight text-white">
+        <h1 className="truncate text-lg font-bold leading-tight text-white">
           {job.role}
         </h1>
-        <p className="flex items-center justify-center gap-1.5 text-sm text-zinc-400">
+        <p className="flex items-center justify-center gap-1.5 truncate text-sm text-zinc-400">
           {job.companyLogo && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -303,7 +333,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
                 companyLogo={job.companyLogo}
                 onTap={() => { if (!isDragging.current) setDetailOpen(true); }}
               />
-              <SwipeOverlay x={x} dangerousMode={dangerousMode} />
+              <SwipeOverlay x={x} quickApply={quickApply} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -313,7 +343,7 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
           className="flex w-10 shrink-0 flex-col items-center justify-center gap-1"
           style={{ opacity: applyIndicatorOpacity, scale: applyIndicatorScale }}
         >
-          {dangerousMode ? (
+          {quickApply ? (
             <>
               <svg
                 width="24"
@@ -361,10 +391,12 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
         onSave={() => saveJob(job)}
         onApply={async () => {
           const success = await applyToJob(job);
-          if (success) setExitDirection("right");
+          if (success && !isExternalJob(job)) setExitDirection("right");
         }}
         onSwipeRight={() => dismiss("right")}
-        dangerousMode={dangerousMode}
+        quickApply={quickApply}
+        isExternal={isExternalJob(job)}
+        externalUrl={getExternalUrl(job)}
       />
 
       {/* HR Contact Bar */}

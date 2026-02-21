@@ -25,13 +25,21 @@ function MediaSkeleton() {
 }
 
 interface ManagerHeroProps {
-  manager: ManagerAsset;
+  manager?: ManagerAsset;
   company?: string;
   companyLogo?: string;
   onTap?: () => void;
 }
 
-export default function ManagerHero({ manager, company, companyLogo, onTap }: ManagerHeroProps) {
+const PLACEHOLDER_MANAGER: ManagerAsset = {
+  name: "Hiring Manager",
+  title: "Manager",
+  tagline: "",
+  photo: "",
+};
+
+export default function ManagerHero({ manager: managerProp, company, companyLogo, onTap }: ManagerHeroProps) {
+  const manager = managerProp ?? PLACEHOLDER_MANAGER;
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -136,6 +144,13 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/5" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent" />
 
+      {/* AI badge */}
+      {manager.isAIGenerated && (
+        <div className="absolute top-3 right-3 z-10 rounded-full border border-white/[0.12] bg-black/40 px-2 py-0.5 backdrop-blur-xl">
+          <span className="text-[10px] font-medium text-white/70">AI Photo</span>
+        </div>
+      )}
+
       {/* Company badge — glass morphism */}
       {company && (
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.08] px-2.5 py-1 shadow-lg backdrop-blur-xl">
@@ -148,16 +163,32 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
               onError={() => setLogoFailed(true)}
             />
           )}
-          <span className="text-xs font-medium text-white/90">{company}</span>
+          <span className="max-w-[140px] truncate text-xs font-medium text-white/90">{company}</span>
         </div>
       )}
 
       {/* Text overlay */}
       <div className="absolute inset-x-0 bottom-0 z-[2] p-5">
-        <h2 className="text-2xl font-bold text-white drop-shadow-md">{manager.name || "Hiring Manager"}</h2>
-        <p className="text-sm font-medium text-zinc-200 drop-shadow-sm">{manager.title || "Manager"}</p>
+        <div className="flex items-center gap-2">
+          <h2 className="truncate text-2xl font-bold text-white drop-shadow-md">{manager.name || "Hiring Manager"}</h2>
+          {manager.linkedinUrl && (
+            <a
+              href={manager.linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`${manager.name} LinkedIn profile`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+            </a>
+          )}
+        </div>
+        <p className="truncate text-sm font-medium text-zinc-200 drop-shadow-sm">{manager.title || "Manager"}</p>
         {manager.tagline && (
-          <p className="mt-2 text-sm leading-relaxed text-zinc-300 italic drop-shadow-sm">
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-300 italic drop-shadow-sm">
             &ldquo;{manager.tagline}&rdquo;
           </p>
         )}

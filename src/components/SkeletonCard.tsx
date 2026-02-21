@@ -1,8 +1,15 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export default function SkeletonCard() {
   return (
-    <div className="flex flex-col gap-3">
+    <motion.div
+      className="flex flex-col gap-3"
+      initial={{ opacity: 0.6 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+    >
       {/* Job header skeleton */}
       <div className="flex flex-col items-center gap-1.5 px-1">
         <div className="h-5 w-48 rounded-md bg-zinc-800 animate-pulse" />
@@ -56,6 +63,6 @@ export default function SkeletonCard() {
           <div className="h-3 w-16 rounded bg-zinc-800/40 animate-pulse" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

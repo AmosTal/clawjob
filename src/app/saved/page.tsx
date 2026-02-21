@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { auth } from "@/lib/firebase-client";
-import type { JobCard, UserProfile, CVVersion } from "@/lib/types";
+import { fetchWithAuth } from "@/lib/firebase-client";
+import type { JobCard, UserProfile, CVVersion, Application } from "@/lib/types";
 import SavedJobCard from "@/components/SavedJobCard";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
@@ -13,31 +14,23 @@ import CVPreviewModal from "@/components/CVPreviewModal";
 
 function SavedPageContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const { showToast } = useToast();
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [cvPreviewJob, setCvPreviewJob] = useState<JobCard | null>(null);
   const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
-
-  const getToken = useCallback(async () => {
-    return await auth.currentUser?.getIdToken();
-  }, []);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
 
   const fetchSavedJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await getToken();
-      const [res, profileRes, cvsRes] = await Promise.all([
-        fetch("/api/saved", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/user/cvs", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [res, profileRes, cvsRes, appsRes] = await Promise.all([
+        fetchWithAuth("/api/saved"),
+        fetchWithAuth("/api/user"),
+        fetchWithAuth("/api/user/cvs"),
+        fetchWithAuth("/api/applications"),
       ]);
       if (profileRes.ok) {
         const profileData: UserProfile = await profileRes.json();
@@ -46,6 +39,10 @@ function SavedPageContent() {
       if (cvsRes.ok) {
         const cvsData: CVVersion[] = await cvsRes.json();
         setCvVersions(cvsData);
+      }
+      if (appsRes.ok) {
+        const appsData: Application[] = await appsRes.json();
+        setAppliedJobIds(new Set(appsData.map((a) => a.jobId)));
       }
       if (!res.ok) throw new Error("Failed to fetch saved jobs");
       const savedIds: string[] = await res.json();
@@ -73,7 +70,7 @@ function SavedPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [getToken, showToast]);
+  }, [showToast]);
 
   useEffect(() => {
     if (user) fetchSavedJobs();
@@ -85,10 +82,8 @@ function SavedPageContent() {
 
   const handleRemove = async (jobId: string) => {
     try {
-      const token = await getToken();
-      const res = await fetch(`/api/saved/${jobId}`, {
+      const res = await fetchWithAuth(`/api/saved/${jobId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Failed to remove");
@@ -103,13 +98,9 @@ function SavedPageContent() {
   const handleConfirmApply = async (job: JobCard, message: string, resumeVersionId?: string) => {
     setCvPreviewJob(null);
     try {
-      const token = await getToken();
-      const applyRes = await fetch("/api/applications", {
+      const applyRes = await fetchWithAuth("/api/applications", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: job.id,
           message: message || undefined,
@@ -119,9 +110,8 @@ function SavedPageContent() {
       if (!applyRes.ok) throw new Error("Failed to apply");
 
       // Remove from saved
-      await fetch(`/api/saved/${job.id}`, {
+      await fetchWithAuth(`/api/saved/${job.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       setJobs((prev) => prev.filter((j) => j.id !== job.id));
@@ -193,7 +183,7 @@ function SavedPageContent() {
               Swipe right on jobs you like to save them here for later. Review and apply when you are ready.
             </p>
             <motion.button
-              onClick={() => window.location.href = "/"}
+              onClick={() => router.push("/")}
               className="mt-2 flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20"
               whileTap={{ scale: 0.95 }}
             >
@@ -219,6 +209,7 @@ function SavedPageContent() {
                   index={i}
                   onApply={handleApply}
                   onRemove={handleRemove}
+                  applied={appliedJobIds.has(job.id)}
                 />
               ))}
             </div>
@@ -235,14 +226,9 @@ function SavedPageContent() {
           cvVersions={cvVersions}
           onCvUploaded={async () => {
             try {
-              const token = await getToken();
               const [cvsRes, profileRes] = await Promise.all([
-                fetch("/api/user/cvs", {
-                  headers: { Authorization: `Bearer ${token}` },
-                }),
-                fetch("/api/user", {
-                  headers: { Authorization: `Bearer ${token}` },
-                }),
+                fetchWithAuth("/api/user/cvs"),
+                fetchWithAuth("/api/user"),
               ]);
               if (cvsRes.ok) {
                 const data: CVVersion[] = await cvsRes.json();

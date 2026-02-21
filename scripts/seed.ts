@@ -1,8 +1,15 @@
-import { initializeApp, getApps, cert, type ServiceAccount } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+/**
+ * seed.ts — Trigger the live scraper to populate Firestore with real job data.
+ *
+ * Usage:
+ *   npx tsx scripts/seed.ts
+ *
+ * Requires CRON_SECRET in .env.local (or environment).
+ * Calls POST /api/cron/scrape to kick off the scraper pipeline.
+ */
+
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { sampleJobs } from "../src/lib/data";
 
 // Load .env.local manually (no dotenv dependency)
 try {
@@ -17,48 +24,38 @@ try {
     const value = trimmed.slice(eqIdx + 1).trim();
     if (!process.env[key]) process.env[key] = value;
   }
-} catch { /* .env.local not found */ }
-
-if (getApps().length === 0) {
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  initializeApp(
-    serviceAccountKey
-      ? { credential: cert(JSON.parse(serviceAccountKey) as ServiceAccount) }
-      : { projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "clawjob" }
-  );
+} catch {
+  /* .env.local not found */
 }
 
-const db = getFirestore();
-db.settings({ ignoreUndefinedProperties: true });
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+const CRON_SECRET = process.env.CRON_SECRET;
 
-async function clearCollection(collectionPath: string) {
-  const snapshot = await db.collection(collectionPath).get();
-  if (snapshot.empty) {
-    console.log(`Collection "${collectionPath}" is already empty.`);
-    return;
-  }
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
-  console.log(`Cleared ${snapshot.size} documents from "${collectionPath}".`);
+if (!CRON_SECRET) {
+  console.error("Error: CRON_SECRET is not set. Add it to .env.local or your environment.");
+  process.exit(1);
 }
 
 async function seed() {
-  console.log("Starting seed...\n");
+  console.log(`Triggering scraper at ${BASE_URL}/api/cron/scrape ...\n`);
 
-  console.log("Clearing existing jobs collection...");
-  await clearCollection("jobs");
+  const res = await fetch(`${BASE_URL}/api/cron/scrape`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRON_SECRET}`,
+    },
+  });
 
-  console.log(`\nSeeding ${sampleJobs.length} jobs...\n`);
-
-  for (let i = 0; i < sampleJobs.length; i++) {
-    const job = sampleJobs[i];
-    const docRef = db.collection("jobs").doc();
-    await docRef.set({ ...job, id: docRef.id });
-    console.log(`  [${i + 1}/${sampleJobs.length}] ${job.role} at ${job.company}`);
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Scrape request failed (${res.status}): ${body}`);
+    process.exit(1);
   }
 
-  console.log(`\nDone! Seeded ${sampleJobs.length} jobs into Firestore.`);
+  const data = await res.json();
+  console.log("Scraper response:", JSON.stringify(data, null, 2));
+  console.log("\nDone! Jobs have been seeded from live sources.");
 }
 
 seed().catch((err) => {

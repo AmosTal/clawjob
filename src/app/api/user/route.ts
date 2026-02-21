@@ -71,8 +71,8 @@ export async function PATCH(request: Request) {
       const role = validateEnum(body.role, ["seeker", "employer"] as const);
       if (role) updates.role = role;
     }
-    if (typeof body.dangerousMode === "boolean") {
-      updates.dangerousMode = body.dangerousMode;
+    if (typeof body.quickApply === "boolean") {
+      updates.quickApply = body.quickApply;
     }
 
     if (Object.keys(updates).length === 0) {

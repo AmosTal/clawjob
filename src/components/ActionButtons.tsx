@@ -7,7 +7,9 @@ interface ActionButtonsProps {
   onSave: () => void;
   onApply: () => void;
   onSwipeRight: () => void;
-  dangerousMode?: boolean;
+  quickApply?: boolean;
+  isExternal?: boolean;
+  externalUrl?: string;
 }
 
 const bounceTransition = {
@@ -22,8 +24,17 @@ export default function ActionButtons({
   onSave,
   onApply,
   onSwipeRight,
-  dangerousMode,
+  quickApply,
+  isExternal,
+  externalUrl,
 }: ActionButtonsProps) {
+  const handleApply = () => {
+    if (isExternal && externalUrl) {
+      window.open(externalUrl, "_blank", "noopener,noreferrer");
+    } else {
+      onApply();
+    }
+  };
   return (
     <div className="flex items-end justify-center gap-5 py-3">
       {/* Skip button */}
@@ -56,8 +67,8 @@ export default function ActionButtons({
       </div>
 
       {/* Center (small) button -- secondary action */}
-      {dangerousMode ? (
-        /* Dangerous mode: center = Save (amber bookmark) */
+      {quickApply ? (
+        /* Quick Apply mode: center = Save (amber bookmark) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
             className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30 touch-manipulation"
@@ -85,66 +96,64 @@ export default function ActionButtons({
           </span>
         </div>
       ) : (
-        /* Safe mode: center = Apply (emerald heart) */
+        /* Default mode: center = Apply (emerald heart) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
             className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30 touch-manipulation"
             whileTap={{ scale: 0.9 }}
             whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
-            onClick={onApply}
-            aria-label="Apply to this job"
+            onClick={handleApply}
+            aria-label={isExternal ? "View on external site" : "Apply to this job"}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </svg>
+            {isExternal ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            )}
           </motion.button>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">
-            Apply
+            {isExternal ? "View" : "Apply"}
           </span>
         </div>
       )}
 
       {/* Right (big) button -- primary right action */}
-      {dangerousMode ? (
-        /* Dangerous mode: right = Apply (emerald heart) */
+      {quickApply ? (
+        /* Quick Apply mode: right = Apply (emerald heart) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
             className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30 touch-manipulation"
             whileTap={{ scale: 0.9 }}
             whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
-            onClick={onSwipeRight}
-            aria-label="Apply to this job"
+            onClick={isExternal && externalUrl ? handleApply : onSwipeRight}
+            aria-label={isExternal ? "View on external site" : "Apply to this job"}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </svg>
+            {isExternal ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            )}
           </motion.button>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">
-            Apply
+            {isExternal ? "View" : "Apply"}
           </span>
         </div>
       ) : (
-        /* Safe mode: right = Save (amber bookmark) */
+        /* Default mode: right = Save (amber bookmark) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
             className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30 touch-manipulation"

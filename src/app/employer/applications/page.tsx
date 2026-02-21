@@ -65,8 +65,8 @@ export default function EmployerApplicationsPage() {
         if (!cancelled) {
           setJobApps(results.filter((r) => r.applications.length > 0));
         }
-      } catch (err) {
-        console.error("Failed to load applications:", err);
+      } catch {
+        // Error loading applications — user sees empty state
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -123,8 +123,8 @@ export default function EmployerApplicationsPage() {
         ) : (
           <div className="space-y-5">
             {jobApps.map(({ job, applications }) => (
-              <div key={job.id}>
-                <h3 className="mb-2 text-xs font-semibold text-zinc-300">
+              <div key={job.id} className="min-w-0">
+                <h3 className="mb-2 truncate text-xs font-semibold text-zinc-300">
                   {job.role}{" "}
                   <span className="font-normal text-zinc-500">
                     at {job.company}
@@ -137,7 +137,7 @@ export default function EmployerApplicationsPage() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03, duration: 0.25 }}
-                      className="flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3"
+                      className="flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3 transition-colors hover:bg-zinc-800/80"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm text-white">

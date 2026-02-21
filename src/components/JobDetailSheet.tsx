@@ -30,12 +30,43 @@ export default function JobDetailSheet({
 }: JobDetailSheetProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [fullJob, setFullJob] = useState<JobCard | null>(null);
+  const [loadingFull, setLoadingFull] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  // Fetch full job data when the sheet opens (listing endpoint returns partial data)
   useEffect(() => {
     setShowDetails(false);
     setLogoFailed(false);
-  }, [isOpen]);
+    setFullJob(null);
+
+    if (!isOpen || !job) return;
+
+    // If the job already has description/requirements, no need to fetch
+    if (job.description || (job.requirements && job.requirements.length > 0)) {
+      setFullJob(job);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingFull(true);
+
+    fetch(`/api/jobs/${job.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: JobCard | null) => {
+        if (!cancelled && data) setFullJob(data);
+      })
+      .catch(() => {
+        // Fall back to partial data if fetch fails
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFull(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, job]);
 
   // Focus trap and Escape key handling for modal
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -78,6 +109,8 @@ export default function JobDetailSheet({
   };
 
   const color = getCompanyColor(job.company);
+  // Use full job data if available, otherwise fall back to listing data
+  const detail = fullJob ?? job;
 
   return (
     <AnimatePresence>
@@ -118,6 +151,20 @@ export default function JobDetailSheet({
 
             {/* Scrollable content */}
             <div className="overflow-y-auto overscroll-contain px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+              {/* Source attribution chip for external jobs */}
+              {!job.employerId && job.sourceName && (
+                <div className="mb-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1 text-[11px] font-medium text-zinc-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    Via {job.sourceName}
+                  </span>
+                </div>
+              )}
+
               {/* Company header */}
               <div className="mb-4 flex items-center gap-3">
                 <div
@@ -138,12 +185,12 @@ export default function JobDetailSheet({
                     />
                   )}
                 </div>
-                <div>
-                  <span className="text-base font-medium text-zinc-300">
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-medium text-zinc-300">
                     {job.company}
                   </span>
                   {job.location && (
-                    <p className="text-xs text-zinc-500">{job.location}</p>
+                    <p className="truncate text-xs text-zinc-500">{job.location}</p>
                   )}
                 </div>
               </div>
@@ -152,6 +199,13 @@ export default function JobDetailSheet({
               <h2 className="mb-4 text-2xl font-bold text-white">
                 {job.role}
               </h2>
+
+              {/* Posted date for external jobs */}
+              {detail.postedAt && (
+                <p className="mb-3 text-xs text-zinc-500">
+                  Posted {new Date(detail.postedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                </p>
+              )}
 
               {/* Key details */}
               <div className="mb-4 flex flex-wrap gap-2">
@@ -193,7 +247,7 @@ export default function JobDetailSheet({
                     {job.salary}
                   </span>
                 )}
-                {job.teamSize && (
+                {detail.teamSize && (
                   <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
                     <svg
                       width="14"
@@ -211,13 +265,13 @@ export default function JobDetailSheet({
                       <path d="M23 21v-2a4 4 0 00-3-3.87" />
                       <path d="M16 3.13a4 4 0 010 7.75" />
                     </svg>
-                    {job.teamSize}
+                    {detail.teamSize}
                   </span>
                 )}
               </div>
 
               {/* Hiring Manager card */}
-              {job.manager && (
+              {detail.manager && (
                 <div className="mb-4">
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                     Hiring Manager
@@ -227,17 +281,17 @@ export default function JobDetailSheet({
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                       style={{ backgroundColor: color }}
                     >
-                      {(job.manager.name || "HM")
+                      {(detail.manager.name || "HM")
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {job.manager.name || "Hiring Manager"}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">
+                        {detail.manager.name || "Hiring Manager"}
                       </p>
-                      <p className="text-xs text-zinc-400">
-                        {job.manager.title || "Manager"}
+                      <p className="truncate text-xs text-zinc-400">
+                        {detail.manager.title || "Manager"}
                       </p>
                     </div>
                   </div>
@@ -245,13 +299,13 @@ export default function JobDetailSheet({
               )}
 
               {/* Culture tags */}
-              {job.culture && job.culture.length > 0 && (
+              {detail.culture && detail.culture.length > 0 && (
                 <div className="mb-4">
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Culture
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {job.culture.map((tag) => (
+                    {detail.culture.map((tag) => (
                       <span
                         key={tag}
                         className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300"
@@ -263,8 +317,15 @@ export default function JobDetailSheet({
                 </div>
               )}
 
+              {/* Loading indicator for full job data */}
+              {loadingFull && (
+                <div className="flex items-center justify-center py-4">
+                  <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                </div>
+              )}
+
               {/* View Full Description toggle */}
-              {(job.description || (job.requirements && job.requirements.length > 0) || (job.benefits && job.benefits.length > 0)) && (
+              {(detail.description || (detail.requirements && detail.requirements.length > 0) || (detail.benefits && detail.benefits.length > 0)) && (
                 <>
                   <motion.button
                     onClick={() => setShowDetails((v) => !v)}
@@ -301,25 +362,25 @@ export default function JobDetailSheet({
                       >
                         <div className="pt-4">
                           {/* About this role */}
-                          {job.description && (
+                          {detail.description && (
                             <div className="mb-4">
                               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                                 About this role
                               </h3>
                               <p className="text-sm leading-relaxed text-zinc-300">
-                                {job.description}
+                                {detail.description}
                               </p>
                             </div>
                           )}
 
                           {/* Requirements */}
-                          {job.requirements && job.requirements.length > 0 && (
+                          {detail.requirements && detail.requirements.length > 0 && (
                             <div className="mb-4">
                               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                                 Requirements
                               </h3>
                               <ul className="space-y-2">
-                                {job.requirements.map((req) => (
+                                {detail.requirements.map((req) => (
                                   <li
                                     key={req}
                                     className="flex items-start gap-2 text-sm text-zinc-300"
@@ -378,6 +439,25 @@ export default function JobDetailSheet({
                     )}
                   </AnimatePresence>
                 </>
+              )}
+
+              {/* External apply button for scraped jobs */}
+              {!job.employerId && (job.sourceUrl || job.applyUrl) && (
+                <motion.a
+                  href={job.applyUrl || job.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[48px]"
+                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.01 }}
+                >
+                  Apply on {job.sourceName || job.company}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </motion.a>
               )}
             </div>
           </motion.div>

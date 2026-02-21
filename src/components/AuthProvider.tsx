@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const profileCreated = useRef(false);
+  const profileCreating = useRef(false);
 
   const fetchProfile = useCallback(async (firebaseUser: User) => {
     try {
@@ -73,9 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        // On first sign-in, create user profile then fetch it
-        if (!profileCreated.current) {
-          profileCreated.current = true;
+        // On first sign-in, create user profile then fetch it.
+        // Guard with both a "created" flag and a "creating" mutex to
+        // prevent duplicate profile creation on rapid auth-state changes.
+        if (!profileCreated.current && !profileCreating.current) {
+          profileCreating.current = true;
           try {
             const token = await firebaseUser.getIdToken();
             await fetch("/api/user", {
@@ -91,8 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 photoURL: firebaseUser.photoURL,
               }),
             });
+            profileCreated.current = true;
           } catch {
             // fire-and-forget: silently ignore errors
+          } finally {
+            profileCreating.current = false;
           }
         }
         await fetchProfile(firebaseUser);
@@ -109,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
     profileCreated.current = false;
+    profileCreating.current = false;
     setUserProfile(null);
   }, []);
 

@@ -220,7 +220,7 @@ export default function FilterBar({
           <motion.div
             key="location-dropdown"
             {...dropdownMotion}
-            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            className="absolute left-0 top-full z-50 mt-2 max-h-[min(15rem,60vh)] w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
             role="listbox"
             aria-label="Select location"
           >
@@ -278,7 +278,7 @@ export default function FilterBar({
           <motion.div
             key="tags-dropdown"
             {...dropdownMotion}
-            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            className="absolute left-0 top-full z-50 mt-2 max-h-[min(15rem,60vh)] w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
             role="listbox"
             aria-label="Select skills"
             aria-multiselectable="true"

@@ -16,7 +16,7 @@ export default function PostJobPage() {
   // Core fields
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
-  const [location, setLocation] = useState("");
+  const [jobLocation, setJobLocation] = useState("");
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [description, setDescription] = useState("");
@@ -74,7 +74,7 @@ export default function PostJobPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !company.trim() || !location.trim()) {
+    if (!title.trim() || !company.trim() || !jobLocation.trim()) {
       showToast("Please fill in required fields", "error");
       return;
     }
@@ -95,7 +95,7 @@ export default function PostJobPage() {
       const body = {
         role: title.trim(),
         company: company.trim(),
-        location: location.trim(),
+        location: jobLocation.trim(),
         salary,
         description: description.trim() || undefined,
         requirements: requirements.map((r) => r.trim()).filter(Boolean),
@@ -190,8 +190,8 @@ export default function PostJobPage() {
             />
             <Input
               label="Location *"
-              value={location}
-              onChange={setLocation}
+              value={jobLocation}
+              onChange={setJobLocation}
               placeholder="e.g. San Francisco, CA (Remote)"
             />
             <div className="grid grid-cols-2 gap-3">

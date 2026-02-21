@@ -142,7 +142,7 @@ export default function ApplicationCard({
 
   return (
     <motion.div
-      className="rounded-xl border border-zinc-700/40 bg-zinc-900 p-4"
+      className="rounded-xl border border-zinc-700/40 bg-zinc-900 p-4 transition-colors hover:border-zinc-600/60"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
@@ -170,7 +170,7 @@ export default function ApplicationCard({
             <p className="truncate text-sm font-bold text-white">
               {application.jobTitle}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-400">{application.company}</p>
+            <p className="mt-0.5 truncate text-xs text-zinc-400">{application.company}</p>
             <p className="mt-0.5 text-xs text-zinc-500">{appliedDate}</p>
           </div>
         </div>
@@ -187,6 +187,7 @@ export default function ApplicationCard({
       {/* Timeline progress */}
       {!isTerminal && currentStepIndex >= 0 && (
         <div className="mt-3.5" role="progressbar" aria-valuenow={currentStepIndex + 1} aria-valuemin={1} aria-valuemax={statusSteps.length} aria-label={`Application progress: ${statusConfig[application.status as (typeof statusSteps)[number]]?.label ?? application.status}`}>
+          {/* Progress bar segments */}
           <div className="flex items-center gap-1">
             {statusSteps.map((step, i) => (
               <div
@@ -199,19 +200,31 @@ export default function ApplicationCard({
               />
             ))}
           </div>
-          <div className="mt-1 flex justify-between">
-            {statusSteps.map((step, i) => (
-              <span
-                key={step}
-                className={`text-[9px] font-medium ${
-                  i <= currentStepIndex
-                    ? statusConfig[step].text
-                    : "text-zinc-600"
-                }`}
-              >
-                {statusConfig[step].label}
-              </span>
-            ))}
+          {/* Step labels with current step highlight */}
+          <div className="mt-1.5 flex justify-between">
+            {statusSteps.map((step, i) => {
+              const isCurrent = i === currentStepIndex;
+              return (
+                <span
+                  key={step}
+                  className={`text-[9px] font-medium transition-colors ${
+                    isCurrent
+                      ? `${statusConfig[step].text} font-bold`
+                      : i < currentStepIndex
+                        ? statusConfig[step].text
+                        : "text-zinc-600"
+                  }`}
+                >
+                  {isCurrent && (
+                    <span className="relative mr-0.5 inline-flex h-1.5 w-1.5 align-middle">
+                      <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${statusConfig[step].dot}`} />
+                      <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${statusConfig[step].dot}`} />
+                    </span>
+                  )}
+                  {statusConfig[step].label}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

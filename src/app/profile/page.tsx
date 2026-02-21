@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { auth, storage } from "@/lib/firebase-client";
+import { storage, fetchWithAuth } from "@/lib/firebase-client";
 import type { UserProfile, Application, CVVersion } from "@/lib/types";
+import { MAX_FILE_SIZE, ACCEPTED_MIME_TYPES, ACCEPTED_FILE_EXTENSIONS } from "@/lib/constants";
 import AppShell from "@/components/AppShell";
 import SignInScreen from "@/components/SignInScreen";
 import { useRouter } from "next/navigation";
@@ -21,13 +22,6 @@ const stagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
 };
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -51,7 +45,7 @@ export default function ProfilePage() {
   const [editBio, setEditBio] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [dangerousMode, setDangerousMode] = useState(false);
+  const [quickApply, setQuickApply] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [cvVersions, setCvVersions] = useState<CVVersion[]>([]);
 
@@ -61,33 +55,23 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTaskRef = useRef<ReturnType<typeof uploadBytesResumable> | null>(null);
 
-  const getToken = useCallback(async () => {
-    return await auth.currentUser?.getIdToken();
-  }, []);
-
   const fetchProfile = useCallback(async () => {
     try {
-      const token = await getToken();
-      const res = await fetch("/api/user", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetchWithAuth("/api/user");
       if (!res.ok) throw new Error("Failed to fetch profile");
       const data: UserProfile = await res.json();
       setProfile(data);
       setEditName(data.name || "");
       setEditBio(data.bio || "");
-      setDangerousMode(data.dangerousMode ?? false);
+      setQuickApply(data.quickApply ?? false);
     } catch {
       // silently fail
     }
-  }, [getToken]);
+  }, []);
 
   const fetchStats = useCallback(async () => {
     try {
-      const token = await getToken();
-      const res = await fetch("/api/applications", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetchWithAuth("/api/applications");
       if (!res.ok) throw new Error("Failed to fetch applications");
       const apps: Application[] = await res.json();
       setStats({
@@ -98,21 +82,18 @@ export default function ProfilePage() {
     } catch {
       // silently fail
     }
-  }, [getToken]);
+  }, []);
 
   const fetchCVVersions = useCallback(async () => {
     try {
-      const token = await getToken();
-      const res = await fetch("/api/user/cvs", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetchWithAuth("/api/user/cvs");
       if (!res.ok) throw new Error("Failed to fetch CVs");
       const data: CVVersion[] = await res.json();
       setCvVersions(data);
     } catch {
       // silently fail
     }
-  }, [getToken]);
+  }, []);
 
   const resetUploadState = useCallback(() => {
     setUploadProgress(null);
@@ -133,9 +114,8 @@ export default function ProfilePage() {
     async (file: File) => {
       if (!user) return;
 
-      const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
       const ext = file.name.toLowerCase().replace(/^.*(\.[^.]+)$/, "$1");
-      const validType = ACCEPTED_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext);
+      const validType = ACCEPTED_MIME_TYPES.includes(file.type) || ACCEPTED_FILE_EXTENSIONS.includes(ext);
 
       if (!validType) {
         showToast("Please upload a PDF, DOC, or DOCX file", "error");
@@ -169,22 +149,17 @@ export default function ProfilePage() {
             if (error.code === "storage/canceled") {
               return;
             }
-            console.error("Upload error:", error.code, error.message);
             showToast(`Upload failed: ${error.code}`, "error");
             resetUploadState();
           },
           async () => {
             try {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              const token = await getToken();
               const name = file.name.replace(/\.[^.]+$/, "");
 
-              const cvRes = await fetch("/api/user/cvs", {
+              const cvRes = await fetchWithAuth("/api/user/cvs", {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   name,
                   fileName: file.name,
@@ -197,21 +172,19 @@ export default function ProfilePage() {
               setUploadProgress(100);
               await fetchCVVersions();
               showToast("CV uploaded!", "success");
-            } catch (err) {
-              console.error("Metadata save error:", err);
+            } catch {
               showToast("Upload succeeded but failed to save details.", "error");
             } finally {
               resetUploadState();
             }
           }
         );
-      } catch (error) {
-        console.error("Upload setup error:", error);
+      } catch {
         showToast("Failed to start upload.", "error");
         resetUploadState();
       }
     },
-    [user, getToken, showToast, fetchCVVersions, resetUploadState]
+    [user, showToast, fetchCVVersions, resetUploadState]
   );
 
   const handleDeleteCV = useCallback(
@@ -220,10 +193,8 @@ export default function ProfilePage() {
       setDeletingCvId(cvId);
 
       try {
-        const token = await getToken();
-        const res = await fetch(`/api/user/cvs/${cvId}`, {
+        const res = await fetchWithAuth(`/api/user/cvs/${cvId}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to delete");
 
@@ -235,19 +206,15 @@ export default function ProfilePage() {
         setDeletingCvId(null);
       }
     },
-    [user, getToken, showToast, fetchCVVersions, fetchProfile]
+    [user, showToast, fetchCVVersions, fetchProfile]
   );
 
   const handleSetDefaultCV = useCallback(
     async (cvId: string) => {
       try {
-        const token = await getToken();
-        const res = await fetch(`/api/user/cvs/${cvId}`, {
+        const res = await fetchWithAuth(`/api/user/cvs/${cvId}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isDefault: true }),
         });
         if (!res.ok) throw new Error("Failed to set default");
@@ -257,7 +224,7 @@ export default function ProfilePage() {
         showToast("Failed to set default CV", "error");
       }
     },
-    [getToken, showToast, fetchCVVersions, fetchProfile]
+    [showToast, fetchCVVersions, fetchProfile]
   );
 
   const handleRenameCV = useCallback(
@@ -269,13 +236,9 @@ export default function ProfilePage() {
       }
 
       try {
-        const token = await getToken();
-        const res = await fetch(`/api/user/cvs/${cvId}`, {
+        const res = await fetchWithAuth(`/api/user/cvs/${cvId}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: trimmed }),
         });
         if (!res.ok) throw new Error("Failed to rename");
@@ -287,7 +250,7 @@ export default function ProfilePage() {
         setRenamingCvId(null);
       }
     },
-    [getToken, showToast, fetchCVVersions]
+    [showToast, fetchCVVersions]
   );
 
   useEffect(() => {
@@ -301,13 +264,9 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const token = await getToken();
-      const res = await fetch("/api/user", {
+      const res = await fetchWithAuth("/api/user", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editName,
           bio: editBio,
@@ -328,13 +287,9 @@ export default function ProfilePage() {
     setSwitchingRole(true);
     try {
       const newRole = role === "employer" ? "seeker" : "employer";
-      const token = await getToken();
-      const res = await fetch("/api/user", {
+      const res = await fetchWithAuth("/api/user", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) throw new Error("Failed to switch role");
@@ -465,7 +420,7 @@ export default function ProfilePage() {
                   </button>
                 )}
 
-                <p className="text-sm text-zinc-500">
+                <p className="max-w-[280px] truncate text-sm text-zinc-500">
                   {profile?.email || user.email}
                 </p>
 
@@ -485,7 +440,7 @@ export default function ProfilePage() {
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    <span className="text-xs font-medium text-emerald-400">
+                    <span className="max-w-[200px] truncate text-xs font-medium text-emerald-400">
                       {profile.resumeFileName}
                     </span>
                   </div>
@@ -798,44 +753,40 @@ export default function ProfilePage() {
                   Preferences
                 </h3>
                 <div className="flex flex-col divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-zinc-900">
-                  {/* Dangerous Mode Toggle */}
+                  {/* Quick Apply Toggle */}
                   <div className="flex items-center justify-between px-4 py-3.5">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-white">Quick Apply</span>
                       <span className="text-xs text-zinc-500">
-                        {dangerousMode ? "Swipe right applies instantly" : "Swipe right saves for review first"}
+                        {quickApply ? "Swipe right applies instantly" : "Swipe right saves for review first"}
                       </span>
                     </div>
                     <button
                       onClick={async () => {
-                        const newValue = !dangerousMode;
-                        setDangerousMode(newValue);
+                        const newValue = !quickApply;
+                        setQuickApply(newValue);
                         try {
-                          const token = await getToken();
-                          await fetch("/api/user", {
+                          await fetchWithAuth("/api/user", {
                             method: "PATCH",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({ dangerousMode: newValue }),
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ quickApply: newValue }),
                           });
                           await refreshProfile();
-                          showToast(newValue ? "Dangerous mode enabled" : "Safe mode enabled", "info");
+                          showToast(newValue ? "Quick Apply enabled" : "Quick Apply disabled", "info");
                         } catch {
-                          setDangerousMode(!newValue);
+                          setQuickApply(!newValue);
                           showToast("Failed to update setting", "error");
                         }
                       }}
-                      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors touch-manipulation ${dangerousMode ? "bg-red-500" : "bg-zinc-600"
+                      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors touch-manipulation ${quickApply ? "bg-red-500" : "bg-zinc-600"
                         }`}
                       role="switch"
-                      aria-checked={dangerousMode}
+                      aria-checked={quickApply}
                       aria-label="Quick Apply mode"
                     >
                       <motion.span
                         className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm"
-                        animate={{ x: dangerousMode ? 20 : 0 }}
+                        animate={{ x: quickApply ? 20 : 0 }}
                         transition={{ type: "spring", stiffness: 500, damping: 30 }}
                       />
                     </button>

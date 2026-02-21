@@ -229,7 +229,7 @@ export async function createOrUpdateUser(
 
 export async function updateUser(
   userId: string,
-  data: Partial<Pick<UserProfile, "name" | "bio" | "resumeURL" | "resumeFileName" | "role" | "dangerousMode">>
+  data: Partial<Pick<UserProfile, "name" | "bio" | "resumeURL" | "resumeFileName" | "role" | "quickApply">>
 ): Promise<void> {
   await usersCol.doc(userId).update(data);
 }
@@ -607,4 +607,115 @@ export async function setDefaultCV(
       resumeFileName: cvData.fileName,
     });
   });
+}
+
+// ── Enrichment pipeline functions ─────────────────────────────────
+
+export async function getUnenrichedJobs(limit = 10): Promise<JobCard[]> {
+  // Firestore doesn't support OR queries across missing fields easily,
+  // so we run two queries in parallel:
+  // 1) enrichmentStatus == "pending"
+  // 2) enrichmentStatus is undefined (not yet tagged)
+  const [pendingSnap, untaggedSnap] = await Promise.all([
+    jobsCol
+      .where("enrichmentStatus", "==", "pending")
+      .orderBy("createdAt", "asc")
+      .limit(limit)
+      .get(),
+    jobsCol
+      .where("enrichmentStatus", "==", null)
+      .orderBy("createdAt", "asc")
+      .limit(limit)
+      .get(),
+  ]);
+
+  const seen = new Set<string>();
+  const results: JobCard[] = [];
+
+  // Merge both result sets, deduplicate, and respect the limit
+  for (const doc of [...pendingSnap.docs, ...untaggedSnap.docs]) {
+    if (seen.has(doc.id)) continue;
+    seen.add(doc.id);
+    results.push({ id: doc.id, ...doc.data() } as JobCard);
+    if (results.length >= limit) break;
+  }
+
+  // Sort by createdAt ascending to process oldest first
+  results.sort((a, b) => {
+    const aTime = a.createdAt ?? "";
+    const bTime = b.createdAt ?? "";
+    return aTime < bTime ? -1 : aTime > bTime ? 1 : 0;
+  });
+
+  return results.slice(0, limit);
+}
+
+export async function updateJobEnrichment(
+  jobId: string,
+  enrichedData: {
+    manager?: JobCard["manager"];
+    hr?: JobCard["hr"];
+    requirements?: string[];
+    benefits?: string[];
+    teamSize?: string;
+    culture?: string[];
+    companyLogo?: string;
+    enrichmentStatus: "enriched" | "failed" | "failed_permanent";
+    enrichedAt: string;
+    enrichmentError?: string;
+  }
+): Promise<void> {
+  // Build update object with only provided fields
+  const updates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(enrichedData)) {
+    if (value !== undefined) {
+      updates[key] = value;
+    }
+  }
+  await jobsCol.doc(jobId).update(updates);
+}
+
+export async function getJobsBySource(
+  sourceName: string,
+  limit = 50
+): Promise<JobCard[]> {
+  const snap = await jobsCol
+    .where("sourceName", "==", sourceName)
+    .limit(limit)
+    .get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as JobCard);
+}
+
+export async function getEnrichmentStats(): Promise<{
+  total: number;
+  pending: number;
+  enriched: number;
+  failed: number;
+}> {
+  // Fetch all jobs with minimal data (only enrichmentStatus)
+  const snap = await jobsCol.select("enrichmentStatus").get();
+
+  let pending = 0;
+  let enriched = 0;
+  let failed = 0;
+
+  for (const doc of snap.docs) {
+    const status = doc.data().enrichmentStatus as string | undefined;
+    switch (status) {
+      case "enriched":
+        enriched++;
+        break;
+      case "failed":
+      case "failed_permanent":
+        failed++;
+        break;
+      case "pending":
+      default:
+        // "pending", undefined/null, or any other value counts as pending
+        pending++;
+        break;
+    }
+  }
+
+  return { total: snap.size, pending, enriched, failed };
 }

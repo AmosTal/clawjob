@@ -96,7 +96,7 @@ function StatCard({
     >
       {/* gradient border */}
       <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/30 via-emerald-600/10 to-transparent" />
-      <div className="relative rounded-xl bg-zinc-900 p-3 text-center">
+      <div className="relative rounded-xl bg-gradient-to-b from-emerald-500/[0.06] to-transparent bg-zinc-900 p-3 text-center">
         {/* glow */}
         <div className="absolute -top-4 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full bg-emerald-500/20 blur-xl" />
         <div className="relative">
@@ -281,7 +281,7 @@ function JobCardRow({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.06, duration: 0.35 }}
-      className="rounded-2xl border border-zinc-800/50 bg-zinc-900 p-4"
+      className="rounded-2xl border border-zinc-800/50 bg-zinc-900 p-4 transition-colors hover:border-zinc-700/60"
     >
       {/* Top row: logo + info */}
       <div className="flex gap-3">
@@ -304,7 +304,7 @@ function JobCardRow({
           <h3 className="truncate text-sm font-semibold text-white">
             {job.role}
           </h3>
-          <p className="text-xs text-zinc-400">{job.company}</p>
+          <p className="truncate text-xs text-zinc-400">{job.company}</p>
         </div>
 
         {/* Posted date */}
@@ -353,8 +353,8 @@ function JobCardRow({
       </div>
 
       {/* Location + salary row */}
-      <div className="mt-2.5 flex items-center gap-3 text-xs text-zinc-500">
-        <span className="flex items-center gap-1">
+      <div className="mt-2.5 flex items-center gap-3 text-xs text-zinc-500 min-w-0">
+        <span className="flex items-center gap-1 min-w-0 truncate">
           <svg
             width="12"
             height="12"
@@ -363,11 +363,12 @@ function JobCardRow({
             stroke="currentColor"
             strokeWidth="2"
             aria-hidden="true"
+            className="shrink-0"
           >
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
-          {job.location}
+          <span className="truncate">{job.location}</span>
         </span>
         {job.salary && (
           <span className="flex items-center gap-1">
@@ -483,8 +484,8 @@ export default function EmployerDashboard() {
           totalApplications,
           newToday,
         });
-      } catch (err) {
-        console.error("Failed to load employer data:", err);
+      } catch {
+        // Error loading employer data — user sees empty state
       } finally {
         if (!cancelled) setLoading(false);
       }

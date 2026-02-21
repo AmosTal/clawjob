@@ -8,6 +8,7 @@ interface SavedJobCardProps {
   index: number;
   onApply: (job: JobCard) => void;
   onRemove: (jobId: string) => void;
+  applied?: boolean;
 }
 
 export default function SavedJobCard({
@@ -15,6 +16,7 @@ export default function SavedJobCard({
   index,
   onApply,
   onRemove,
+  applied,
 }: SavedJobCardProps) {
   const initials = (job.manager?.name ?? job.company)
     .split(" ")
@@ -39,7 +41,7 @@ export default function SavedJobCard({
     <motion.div
       layout
       layoutId={`saved-${job.id}`}
-      className="relative overflow-hidden rounded-xl border border-zinc-700/40 bg-zinc-900"
+      className="relative overflow-hidden rounded-xl border border-zinc-700/40 bg-zinc-900 transition-colors hover:border-zinc-600/60"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -200, transition: { duration: 0.25 } }}
@@ -122,18 +124,46 @@ export default function SavedJobCard({
                 {job.salary}
               </p>
             )}
+            {applied && (
+              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-500/20">
+                <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                Applied
+              </span>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="flex shrink-0 flex-col items-center gap-1.5">
-            <motion.button
-              onClick={() => onApply(job)}
-              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[36px]"
-              whileTap={{ scale: 0.93 }}
-              aria-label={`Apply to ${job.role} at ${job.company}`}
-            >
-              Apply
-            </motion.button>
+            {applied ? (
+              <span className="rounded-full bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-500 min-h-[36px] flex items-center">
+                Applied
+              </span>
+            ) : !job.employerId && (job.sourceUrl || job.applyUrl) ? (
+              <motion.a
+                href={job.applyUrl || job.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[36px]"
+                whileTap={{ scale: 0.93 }}
+                aria-label={`View ${job.role} on ${job.sourceName || job.company}`}
+              >
+                View
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </motion.a>
+            ) : (
+              <motion.button
+                onClick={() => onApply(job)}
+                className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[36px]"
+                whileTap={{ scale: 0.93 }}
+                aria-label={`Apply to ${job.role} at ${job.company}`}
+              >
+                Apply
+              </motion.button>
+            )}
             <motion.button
               onClick={() => onRemove(job.id)}
               className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 touch-manipulation"

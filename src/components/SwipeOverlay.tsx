@@ -4,10 +4,10 @@ import { motion, useTransform, type MotionValue } from "framer-motion";
 
 interface SwipeOverlayProps {
   x: MotionValue<number>;
-  dangerousMode?: boolean;
+  quickApply?: boolean;
 }
 
-export default function SwipeOverlay({ x, dangerousMode }: SwipeOverlayProps) {
+export default function SwipeOverlay({ x, quickApply }: SwipeOverlayProps) {
   const applyOpacity = useTransform(x, [0, 60, 130], [0, 0.6, 1]);
   const skipOpacity = useTransform(x, [0, -60, -130], [0, 0.6, 1]);
 
@@ -19,15 +19,15 @@ export default function SwipeOverlay({ x, dangerousMode }: SwipeOverlayProps) {
   const rightTintOpacity = useTransform(x, [0, 70, 160], [0, 0.1, 0.2]);
   const leftTintOpacity = useTransform(x, [0, -70, -160], [0, 0.1, 0.2]);
 
-  const rightLabel = dangerousMode ? "Apply" : "Save";
-  const rightColor = dangerousMode ? "emerald" : "amber";
+  const rightLabel = quickApply ? "Apply" : "Save";
+  const rightColor = quickApply ? "emerald" : "amber";
 
   return (
     <div aria-hidden="true">
       {/* Right swipe color wash */}
       <motion.div
         className={`pointer-events-none absolute inset-0 z-[9] rounded-2xl ${
-          dangerousMode ? "bg-emerald-500" : "bg-amber-500"
+          quickApply ? "bg-emerald-500" : "bg-amber-500"
         }`}
         style={{ opacity: rightTintOpacity }}
       />

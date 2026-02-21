@@ -6,6 +6,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "@/lib/firebase-client";
 import { useToast } from "@/components/Toast";
 import type { JobCard, CVVersion } from "@/lib/types";
+import { MAX_FILE_SIZE, ACCEPTED_MIME_TYPES, ACCEPTED_FILE_EXTENSIONS } from "@/lib/constants";
 
 interface CVPreviewModalProps {
   job: JobCard | null;
@@ -19,13 +20,6 @@ interface CVPreviewModalProps {
 }
 
 const MAX_NOTE_LENGTH = 500;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
-const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 
 export default function CVPreviewModal({
   job,
@@ -94,7 +88,7 @@ export default function CVPreviewModal({
 
       const ext = file.name.toLowerCase().replace(/^.*(\.[^.]+)$/, "$1");
       const validType =
-        ACCEPTED_MIME_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext);
+        ACCEPTED_MIME_TYPES.includes(file.type) || ACCEPTED_FILE_EXTENSIONS.includes(ext);
 
       if (!validType) {
         showToast("Please upload a PDF, DOC, or DOCX file", "error");
@@ -128,7 +122,6 @@ export default function CVPreviewModal({
             if (error.code === "storage/canceled") {
               return;
             }
-            console.error("Upload error:", error.code, error.message);
             showToast(`Upload failed: ${error.code}`, "error");
             resetUploadState();
           },
@@ -162,16 +155,14 @@ export default function CVPreviewModal({
               setSelectedCvId(savedCv.id);
               onCvUploaded?.();
               showToast("CV uploaded!", "success");
-            } catch (err) {
-              console.error("Metadata save error:", err);
+            } catch {
               showToast("Upload succeeded but failed to save details.", "error");
             } finally {
               resetUploadState();
             }
           }
         );
-      } catch (error) {
-        console.error("Upload setup error:", error);
+      } catch {
         showToast("Failed to start upload.", "error");
         resetUploadState();
       }
