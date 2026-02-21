@@ -1,27 +1,30 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { getAllUsers } from "@/lib/db";
+import {
+  apiSuccess,
+  requireAdmin,
+  parsePageParams,
+  handleError,
+} from "@/lib/api-utils";
 
-function isAdmin(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase());
-  return adminEmails.includes(email.toLowerCase());
-}
+const ADMIN_CACHE = { "Cache-Control": "private, s-maxage=30" };
 
 export async function GET(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (!isAdmin(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    await requireAdmin(request);
+    const { limit, offset } = parsePageParams(
+      new URL(request.url).searchParams
+    );
 
-  const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
-  const offset = Number(url.searchParams.get("offset") ?? 0);
-
-  const result = await getAllUsers(limit, offset);
-  return NextResponse.json(result);
+    const result = await getAllUsers(limit, offset);
+    return apiSuccess(
+      {
+        ...result,
+        pagination: { total: result.total, limit, offset },
+      },
+      200,
+      ADMIN_CACHE
+    );
+  } catch (err) {
+    return handleError(err, "GET /api/admin/users");
+  }
 }

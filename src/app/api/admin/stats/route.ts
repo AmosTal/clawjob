@@ -1,23 +1,14 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { getAdminStats } from "@/lib/db";
+import { apiSuccess, requireAdmin, handleError } from "@/lib/api-utils";
 
-function isAdmin(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase());
-  return adminEmails.includes(email.toLowerCase());
-}
+const ADMIN_CACHE = { "Cache-Control": "private, s-maxage=30" };
 
 export async function GET(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  try {
+    await requireAdmin(request);
+    const stats = await getAdminStats();
+    return apiSuccess(stats, 200, ADMIN_CACHE);
+  } catch (err) {
+    return handleError(err, "GET /api/admin/stats");
   }
-  if (!isAdmin(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const stats = await getAdminStats();
-  return NextResponse.json(stats);
 }

@@ -1,49 +1,36 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { getSavedJobs, saveJob } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireAuth,
+  handleError,
+} from "@/lib/api-utils";
 
 export async function GET(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const savedIds = await getSavedJobs(user.uid);
-    return NextResponse.json(savedIds);
+    return apiSuccess(savedIds, 200, {
+      "Cache-Control": "private, no-cache",
+    });
   } catch (err) {
-    console.error("GET /api/saved error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch saved jobs" },
-      { status: 500 }
-    );
+    return handleError(err, "GET /api/saved");
   }
 }
 
 export async function POST(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const body = await request.json();
     const { jobId } = body as { jobId?: string };
 
     if (!jobId) {
-      return NextResponse.json(
-        { error: "jobId is required" },
-        { status: 400 }
-      );
+      return apiError("jobId is required", "VALIDATION_ERROR", 400);
     }
 
     await saveJob(user.uid, jobId);
-    return NextResponse.json({ success: true }, { status: 201 });
+    return apiSuccess({ saved: true }, 201);
   } catch (err) {
-    console.error("POST /api/saved error:", err);
-    return NextResponse.json(
-      { error: "Failed to save job" },
-      { status: 500 }
-    );
+    return handleError(err, "POST /api/saved");
   }
 }

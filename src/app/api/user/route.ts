@@ -1,95 +1,88 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { getUser, updateUser, createOrUpdateUser } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireAuth,
+  handleError,
+} from "@/lib/api-utils";
+import {
+  validateString,
+  validateEnum,
+  validateURL,
+  LIMITS,
+} from "@/lib/validation";
+
+const NO_CACHE = { "Cache-Control": "private, no-cache" };
 
 export async function POST(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const body = await request.json();
-    await createOrUpdateUser(user.uid, {
-      email: body.email ?? user.email,
-      name: body.displayName ?? body.name ?? "",
-      photoURL: body.photoURL,
-    });
-    return NextResponse.json({ ok: true });
+
+    const email = validateString(body.email, LIMITS.email) ?? user.email;
+    const name = validateString(body.displayName ?? body.name, LIMITS.name) ?? "";
+    const photoURL = validateURL(body.photoURL) ?? undefined;
+
+    await createOrUpdateUser(user.uid, { email, name, photoURL });
+    return apiSuccess({ ok: true });
   } catch (err) {
-    console.error("POST /api/user error:", err);
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
+    return handleError(err, "POST /api/user");
   }
 }
 
 export async function GET(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const profile = await getUser(user.uid);
     if (!profile) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return apiError("User not found", "NOT_FOUND", 404);
     }
-    return NextResponse.json(profile);
+    return apiSuccess(profile, 200, NO_CACHE);
   } catch (err) {
-    console.error("GET /api/user error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch user" },
-      { status: 500 }
-    );
+    return handleError(err, "GET /api/user");
   }
 }
 
 export async function PATCH(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const body = await request.json();
-    const { name, bio, resumeURL, resumeFileName, role, dangerousMode } = body as {
-      name?: string;
-      bio?: string;
-      resumeURL?: string;
-      resumeFileName?: string;
-      role?: "seeker" | "employer";
-      dangerousMode?: boolean;
-    };
 
     const updates: Record<string, string | boolean> = {};
-    if (name !== undefined) updates.name = name;
-    if (bio !== undefined) updates.bio = bio;
-    if (resumeURL !== undefined) updates.resumeURL = resumeURL;
-    if (resumeFileName !== undefined) updates.resumeFileName = resumeFileName;
-    if (role === "seeker" || role === "employer") updates.role = role;
-    if (typeof dangerousMode === "boolean") updates.dangerousMode = dangerousMode;
+
+    if (body.name !== undefined) {
+      const name = validateString(body.name, LIMITS.name);
+      if (name !== null) updates.name = name;
+    }
+    if (body.bio !== undefined) {
+      const bio = validateString(body.bio, LIMITS.bio);
+      if (bio !== null) updates.bio = bio;
+    }
+    if (body.resumeURL !== undefined) {
+      const url = validateURL(body.resumeURL);
+      if (url !== null) updates.resumeURL = url;
+      else updates.resumeURL = ""; // Allow clearing
+    }
+    if (body.resumeFileName !== undefined) {
+      const fn = validateString(body.resumeFileName, LIMITS.fileName);
+      if (fn !== null) updates.resumeFileName = fn;
+    }
+    if (body.role !== undefined) {
+      const role = validateEnum(body.role, ["seeker", "employer"] as const);
+      if (role) updates.role = role;
+    }
+    if (typeof body.dangerousMode === "boolean") {
+      updates.dangerousMode = body.dangerousMode;
+    }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
+      return apiError("No fields to update", "VALIDATION_ERROR", 400);
     }
 
     await updateUser(user.uid, updates);
-
     const profile = await getUser(user.uid);
-    return NextResponse.json(profile);
+    return apiSuccess(profile);
   } catch (err) {
-    console.error("PATCH /api/user error:", err);
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
+    return handleError(err, "PATCH /api/user");
   }
 }

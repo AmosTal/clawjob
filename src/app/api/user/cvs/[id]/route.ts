@@ -1,26 +1,23 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { deleteCVVersion, setDefaultCV, updateCVVersion } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireAuth,
+  handleError,
+} from "@/lib/api-utils";
+import { validateString, LIMITS } from "@/lib/validation";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const { id } = await params;
     await deleteCVVersion(user.uid, id);
-    return NextResponse.json({ ok: true });
+    return apiSuccess({ deleted: true });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to delete CV";
-    const status = message === "CV not found" ? 404 : 500;
-    console.error("DELETE /api/user/cvs/[id] error:", err);
-    return NextResponse.json({ error: message }, { status });
+    return handleError(err, "DELETE /api/user/cvs/[id]");
   }
 }
 
@@ -28,12 +25,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const { id } = await params;
     const body = await request.json();
 
@@ -41,23 +34,17 @@ export async function PATCH(
       await setDefaultCV(user.uid, id);
     }
 
-    if (typeof body.name === "string" && body.name.trim()) {
-      await updateCVVersion(user.uid, id, { name: body.name.trim() });
+    const sanitizedName = validateString(body.name, LIMITS.cvName);
+    if (sanitizedName) {
+      await updateCVVersion(user.uid, id, { name: sanitizedName });
     }
 
-    if (body.isDefault !== true && !(typeof body.name === "string" && body.name.trim())) {
-      return NextResponse.json(
-        { error: "No valid update fields" },
-        { status: 400 }
-      );
+    if (body.isDefault !== true && !sanitizedName) {
+      return apiError("No valid update fields", "VALIDATION_ERROR", 400);
     }
 
-    return NextResponse.json({ ok: true });
+    return apiSuccess({ updated: true });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to update CV";
-    const status = message === "CV not found" ? 404 : 500;
-    console.error("PATCH /api/user/cvs/[id] error:", err);
-    return NextResponse.json({ error: message }, { status });
+    return handleError(err, "PATCH /api/user/cvs/[id]");
   }
 }

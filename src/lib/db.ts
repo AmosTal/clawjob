@@ -1,6 +1,28 @@
 import { adminDb, adminStorage } from "./firebase-admin";
 import type { JobCard, Application, UserProfile, CVVersion } from "./types";
 
+// ── Simple in-memory TTL cache ──────────────────────────────────────
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+function getCached<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T, ttlMs: number): void {
+  cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
 const jobsCol = adminDb.collection("jobs");
 const applicationsCol = adminDb.collection("applications");
 const usersCol = adminDb.collection("users");
@@ -24,10 +46,66 @@ export async function getJobs(
   return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as JobCard);
 }
 
+/** Optimized listing query — only fetches fields needed for card display. */
+const LISTING_FIELDS = [
+  "company",
+  "role",
+  "location",
+  "salary",
+  "tags",
+  "companyLogo",
+  "createdAt",
+] as const;
+
+export async function getJobsForListing(
+  limit = 20,
+  startAfterId?: string
+): Promise<Partial<JobCard>[]> {
+  let query = jobsCol
+    .select(...LISTING_FIELDS)
+    .orderBy("__name__")
+    .limit(limit);
+  if (startAfterId) {
+    const startDoc = await jobsCol.doc(startAfterId).get();
+    if (startDoc.exists) {
+      query = query.startAfter(startDoc);
+    }
+  }
+  const snap = await query.get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Partial<JobCard>);
+}
+
 export async function getJobById(id: string): Promise<JobCard | null> {
   const doc = await jobsCol.doc(id).get();
   if (!doc.exists) return null;
   return { id: doc.id, ...doc.data() } as JobCard;
+}
+
+// ── Application status state machine ──────────────────────────────
+// Key = current status, Value = set of statuses it can transition to.
+const APPLICATION_TRANSITIONS: Record<string, Set<string>> = {
+  applied:    new Set(["reviewing", "interview", "offer", "rejected", "withdrawn"]),
+  reviewing:  new Set(["interview", "offer", "rejected", "withdrawn"]),
+  interview:  new Set(["offer", "rejected", "withdrawn"]),
+  offer:      new Set(["rejected", "withdrawn"]),
+  rejected:   new Set([]),
+  withdrawn:  new Set([]),
+};
+
+export function isValidStatusTransition(from: string, to: string): boolean {
+  return APPLICATION_TRANSITIONS[from]?.has(to) ?? false;
+}
+
+export async function checkDuplicateApplication(
+  userId: string,
+  jobId: string
+): Promise<boolean> {
+  const snap = await applicationsCol
+    .where("userId", "==", userId)
+    .where("jobId", "==", jobId)
+    .limit(1)
+    .get();
+  return !snap.empty;
 }
 
 export async function createApplication(
@@ -38,6 +116,10 @@ export async function createApplication(
 ): Promise<string> {
   const job = await getJobById(jobId);
   if (!job) throw new Error("Job not found");
+
+  // Prevent duplicate applications
+  const isDuplicate = await checkDuplicateApplication(userId, jobId);
+  if (isDuplicate) throw new Error("Already applied");
 
   const data: Record<string, unknown> = {
     userId,
@@ -74,10 +156,39 @@ export async function withdrawApplication(
   const doc = await applicationsCol.doc(appId).get();
   if (!doc.exists) throw new Error("Application not found");
   if (doc.data()?.userId !== userId) throw new Error("Forbidden");
+  const currentStatus = doc.data()?.status as string;
+  if (!isValidStatusTransition(currentStatus, "withdrawn")) {
+    throw new Error("Invalid status transition");
+  }
   await applicationsCol.doc(appId).update({ status: "withdrawn" });
 }
 
+export async function updateApplicationStatus(
+  appId: string,
+  newStatus: string,
+  employerId: string
+): Promise<void> {
+  const doc = await applicationsCol.doc(appId).get();
+  if (!doc.exists) throw new Error("Application not found");
+
+  const appData = doc.data()!;
+  const currentStatus = appData.status as string;
+
+  // Verify the employer owns the job this application is for
+  const jobDoc = await jobsCol.doc(appData.jobId as string).get();
+  if (!jobDoc.exists) throw new Error("Job not found");
+  if (jobDoc.data()?.employerId !== employerId) throw new Error("Forbidden");
+
+  if (!isValidStatusTransition(currentStatus, newStatus)) {
+    throw new Error("Invalid status transition");
+  }
+
+  await applicationsCol.doc(appId).update({ status: newStatus });
+}
+
 export async function saveJob(userId: string, jobId: string): Promise<void> {
+  const job = await jobsCol.doc(jobId).get();
+  if (!job.exists) throw new Error("Job not found");
   await savedCol(userId).doc(jobId).set({ savedAt: new Date().toISOString() });
 }
 
@@ -182,24 +293,36 @@ export async function getJobApplications(
 export async function getEmployerApplicationCount(
   employerId: string
 ): Promise<{ total: number; today: number }> {
-  const jobs = await getEmployerJobs(employerId);
-  if (jobs.length === 0) return { total: 0, today: 0 };
+  // Fetch only job IDs (not full documents) to minimize data transfer
+  const jobsSnap = await jobsCol
+    .where("employerId", "==", employerId)
+    .select()
+    .get();
 
-  const jobIds = jobs.map((j) => j.id);
-  // Firestore 'in' queries support max 30 values
+  if (jobsSnap.empty) return { total: 0, today: 0 };
+
+  const jobIds = jobsSnap.docs.map((d) => d.id);
+  // Firestore 'in' queries support max 30 values; run chunks in parallel
   const chunks: string[][] = [];
   for (let i = 0; i < jobIds.length; i += 30) {
     chunks.push(jobIds.slice(i, i + 30));
   }
 
-  let total = 0;
-  let today = 0;
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  for (const chunk of chunks) {
-    const snap = await applicationsCol
-      .where("jobId", "in", chunk)
-      .get();
+  // Run all chunk queries in parallel instead of sequentially
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      applicationsCol
+        .where("jobId", "in", chunk)
+        .select("appliedAt")
+        .get()
+    )
+  );
+
+  let total = 0;
+  let today = 0;
+  for (const snap of results) {
     total += snap.size;
     snap.docs.forEach((doc) => {
       const appliedAt = doc.data().appliedAt as string;
@@ -212,28 +335,41 @@ export async function getEmployerApplicationCount(
 
 // ── Admin functions ───────────────────────────────────────────────
 
+const ADMIN_STATS_CACHE_KEY = "admin_stats";
+const ADMIN_STATS_TTL_MS = 30_000; // 30 seconds
+
 export async function getAdminStats(): Promise<{
   totalJobs: number;
   totalUsers: number;
   totalApplications: number;
   activeEmployers: number;
 }> {
-  const [jobsSnap, usersSnap, appsSnap] = await Promise.all([
+  type StatsResult = {
+    totalJobs: number;
+    totalUsers: number;
+    totalApplications: number;
+    activeEmployers: number;
+  };
+
+  const cached = getCached<StatsResult>(ADMIN_STATS_CACHE_KEY);
+  if (cached) return cached;
+
+  const [jobsSnap, usersSnap, appsSnap, employersSnap] = await Promise.all([
     jobsCol.select().get(),
     usersCol.select().get(),
     applicationsCol.select().get(),
+    usersCol.where("role", "==", "employer").select().get(),
   ]);
 
-  const employerCount = usersSnap.docs.filter(
-    (doc) => doc.data().role === "employer"
-  ).length;
-
-  return {
+  const stats: StatsResult = {
     totalJobs: jobsSnap.size,
     totalUsers: usersSnap.size,
     totalApplications: appsSnap.size,
-    activeEmployers: employerCount,
+    activeEmployers: employersSnap.size,
   };
+
+  setCache(ADMIN_STATS_CACHE_KEY, stats, ADMIN_STATS_TTL_MS);
+  return stats;
 }
 
 export async function getAllUsers(
@@ -313,28 +449,34 @@ export async function addCVVersion(
   data: { name: string; fileName: string; url: string }
 ): Promise<CVVersion> {
   const col = cvVersionsCol(userId);
-  const existing = await col.get();
-  const isFirst = existing.empty;
-
   const now = new Date().toISOString();
-  const ref = await col.add({
-    name: data.name,
-    fileName: data.fileName,
-    url: data.url,
-    uploadedAt: now,
-    isDefault: isFirst,
+  const newRef = col.doc(); // pre-generate ID for use inside transaction
+
+  const isFirst = await adminDb.runTransaction(async (tx) => {
+    const existing = await tx.get(col.limit(1));
+    const first = existing.empty;
+
+    tx.set(newRef, {
+      name: data.name,
+      fileName: data.fileName,
+      url: data.url,
+      uploadedAt: now,
+      isDefault: first,
+    });
+
+    // Sync legacy profile fields when this is the user's first CV
+    if (first) {
+      tx.update(usersCol.doc(userId), {
+        resumeURL: data.url,
+        resumeFileName: data.fileName,
+      });
+    }
+
+    return first;
   });
 
-  // Sync legacy profile fields when this is the user's first CV
-  if (isFirst) {
-    await usersCol.doc(userId).update({
-      resumeURL: data.url,
-      resumeFileName: data.fileName,
-    });
-  }
-
   return {
-    id: ref.id,
+    id: newRef.id,
     name: data.name,
     fileName: data.fileName,
     url: data.url,
@@ -363,7 +505,7 @@ export async function deleteCVVersion(
   const wasDefault = doc.data()?.isDefault === true;
   const fileUrl = doc.data()?.url as string | undefined;
 
-  // Delete the actual file from Firebase Storage
+  // Delete the actual file from Firebase Storage (best-effort, before transaction)
   if (fileUrl) {
     try {
       const bucket = adminStorage.bucket();
@@ -389,26 +531,34 @@ export async function deleteCVVersion(
     }
   }
 
-  await col.doc(cvId).delete();
-
-  // If deleted CV was default, set the newest remaining as default and sync profile
+  // Delete the CV doc and reassign default atomically
   if (wasDefault) {
-    const remaining = await col.orderBy("uploadedAt", "desc").limit(1).get();
-    if (!remaining.empty) {
-      const newDefault = remaining.docs[0];
-      const newData = newDefault.data();
-      await newDefault.ref.update({ isDefault: true });
-      await usersCol.doc(userId).update({
-        resumeURL: newData.url,
-        resumeFileName: newData.fileName,
-      });
-    } else {
-      // No CVs left — clear profile's legacy fields
-      await usersCol.doc(userId).update({
-        resumeURL: "",
-        resumeFileName: "",
-      });
-    }
+    await adminDb.runTransaction(async (tx) => {
+      const remaining = await tx.get(
+        col.orderBy("uploadedAt", "desc").limit(2)
+      );
+
+      tx.delete(col.doc(cvId));
+
+      // Find the next CV that isn't the one being deleted
+      const nextDefault = remaining.docs.find((d) => d.id !== cvId);
+      if (nextDefault) {
+        const newData = nextDefault.data();
+        tx.update(nextDefault.ref, { isDefault: true });
+        tx.update(usersCol.doc(userId), {
+          resumeURL: newData.url,
+          resumeFileName: newData.fileName,
+        });
+      } else {
+        // No CVs left — clear profile's legacy fields
+        tx.update(usersCol.doc(userId), {
+          resumeURL: "",
+          resumeFileName: "",
+        });
+      }
+    });
+  } else {
+    await col.doc(cvId).delete();
   }
 }
 
@@ -434,21 +584,28 @@ export async function setDefaultCV(
   cvId: string
 ): Promise<void> {
   const col = cvVersionsCol(userId);
-  const doc = await col.doc(cvId).get();
-  if (!doc.exists) throw new Error("CV not found");
 
-  // Unset all defaults
-  const snap = await col.where("isDefault", "==", true).get();
-  const batch = adminDb.batch();
-  snap.docs.forEach((d) => batch.update(d.ref, { isDefault: false }));
-  batch.update(col.doc(cvId), { isDefault: true });
+  await adminDb.runTransaction(async (tx) => {
+    const targetDoc = await tx.get(col.doc(cvId));
+    if (!targetDoc.exists) throw new Error("CV not found");
 
-  // Sync user profile's legacy resumeURL/resumeFileName
-  const cvData = doc.data()!;
-  batch.update(usersCol.doc(userId), {
-    resumeURL: cvData.url,
-    resumeFileName: cvData.fileName,
+    const currentDefaults = await tx.get(
+      col.where("isDefault", "==", true)
+    );
+
+    // Unset all current defaults
+    currentDefaults.docs.forEach((d) =>
+      tx.update(d.ref, { isDefault: false })
+    );
+
+    // Set the new default
+    tx.update(col.doc(cvId), { isDefault: true });
+
+    // Sync user profile's legacy resumeURL/resumeFileName
+    const cvData = targetDoc.data()!;
+    tx.update(usersCol.doc(userId), {
+      resumeURL: cvData.url,
+      resumeFileName: cvData.fileName,
+    });
   });
-
-  await batch.commit();
 }

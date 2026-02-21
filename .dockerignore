@@ -2,6 +2,14 @@ node_modules
 .git
 .next
 .env*
+!.env.example
 Dockerfile
 docker-compose*
-README.md
+*.md
+debug_*
+nul
+.claude
+.vscode
+.idea
+*.tsbuildinfo
+coverage

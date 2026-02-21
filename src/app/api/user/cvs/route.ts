@@ -1,53 +1,46 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { getCVVersions, addCVVersion } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireAuth,
+  handleError,
+} from "@/lib/api-utils";
+import { validateString, validateURL, sanitizeFilename, LIMITS } from "@/lib/validation";
+
+const NO_CACHE = { "Cache-Control": "private, no-cache" };
 
 export async function GET(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const cvs = await getCVVersions(user.uid);
-    return NextResponse.json(cvs);
+    return apiSuccess(cvs, 200, NO_CACHE);
   } catch (err) {
-    console.error("GET /api/user/cvs error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch CV versions" },
-      { status: 500 }
-    );
+    return handleError(err, "GET /api/user/cvs");
   }
 }
 
 export async function POST(request: Request) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const body = await request.json();
-    const { name, fileName, url } = body as {
-      name?: string;
-      fileName?: string;
-      url?: string;
-    };
+
+    const name = validateString(body.name, LIMITS.cvName);
+    const fileName = typeof body.fileName === "string"
+      ? sanitizeFilename(body.fileName, LIMITS.fileName)
+      : null;
+    const url = validateURL(body.url);
 
     if (!name || !fileName || !url) {
-      return NextResponse.json(
-        { error: "name, fileName, and url are required" },
-        { status: 400 }
+      return apiError(
+        "name, fileName, and url are required",
+        "VALIDATION_ERROR",
+        400
       );
     }
 
     const cv = await addCVVersion(user.uid, { name, fileName, url });
-    return NextResponse.json(cv, { status: 201 });
+    return apiSuccess(cv, 201);
   } catch (err) {
-    console.error("POST /api/user/cvs error:", err);
-    return NextResponse.json(
-      { error: "Failed to add CV version" },
-      { status: 500 }
-    );
+    return handleError(err, "POST /api/user/cvs");
   }
 }

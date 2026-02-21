@@ -1,4 +1,5 @@
 import type { JobCard } from "./types";
+import { logger } from "./logger";
 
 // ── Types for external API responses ────────────────────────────────
 
@@ -93,19 +94,19 @@ function truncate(text: string, maxLen: number): string {
 // ── Fetchers ────────────────────────────────────────────────────────
 
 async function fetchRemoteOK(): Promise<Omit<JobCard, "id">[]> {
-  console.log("[scraper] Fetching from RemoteOK...");
+  logger.info("Fetching from RemoteOK", { source: "remoteok" });
   try {
     const res = await fetch("https://remoteok.com/api", {
       headers: { "User-Agent": "ClawJob/1.0 (job-aggregator)" },
     });
     if (!res.ok) {
-      console.error(`[scraper] RemoteOK returned ${res.status}`);
+      logger.error("RemoteOK returned non-OK status", { source: "remoteok", status: res.status });
       return [];
     }
     const raw: unknown[] = await res.json();
     // First element is a metadata/legal notice object, skip it
     const jobs = raw.slice(1) as RemoteOKJob[];
-    console.log(`[scraper] RemoteOK returned ${jobs.length} jobs`);
+    logger.info("RemoteOK fetch complete", { source: "remoteok", count: jobs.length });
 
     return jobs
       .filter((j) => j.company && j.position)
@@ -124,22 +125,22 @@ async function fetchRemoteOK(): Promise<Omit<JobCard, "id">[]> {
         source: "remoteok",
       }));
   } catch (err) {
-    console.error("[scraper] RemoteOK fetch failed:", err);
+    logger.error("RemoteOK fetch failed", { source: "remoteok", error: String(err) });
     return [];
   }
 }
 
 async function fetchArbeitnow(): Promise<Omit<JobCard, "id">[]> {
-  console.log("[scraper] Fetching from Arbeitnow...");
+  logger.info("Fetching from Arbeitnow", { source: "arbeitnow" });
   try {
     const res = await fetch("https://www.arbeitnow.com/api/job-board-api");
     if (!res.ok) {
-      console.error(`[scraper] Arbeitnow returned ${res.status}`);
+      logger.error("Arbeitnow returned non-OK status", { source: "arbeitnow", status: res.status });
       return [];
     }
     const data: ArbeitnowResponse = await res.json();
     const jobs = data.data ?? [];
-    console.log(`[scraper] Arbeitnow returned ${jobs.length} jobs`);
+    logger.info("Arbeitnow fetch complete", { source: "arbeitnow", count: jobs.length });
 
     return jobs
       .filter((j) => j.company_name && j.title)
@@ -159,7 +160,7 @@ async function fetchArbeitnow(): Promise<Omit<JobCard, "id">[]> {
         source: "arbeitnow",
       }));
   } catch (err) {
-    console.error("[scraper] Arbeitnow fetch failed:", err);
+    logger.error("Arbeitnow fetch failed", { source: "arbeitnow", error: String(err) });
     return [];
   }
 }
@@ -183,28 +184,39 @@ export async function scrapeJobs(
 ): Promise<ScrapeResult> {
   const errors: string[] = [];
 
-  // Fetch from all sources in parallel
-  const [remoteOKJobs, arbeitnowJobs] = await Promise.all([
-    fetchRemoteOK().catch((err) => {
-      errors.push(`RemoteOK: ${String(err)}`);
-      return [] as Omit<JobCard, "id">[];
-    }),
-    fetchArbeitnow().catch((err) => {
-      errors.push(`Arbeitnow: ${String(err)}`);
-      return [] as Omit<JobCard, "id">[];
-    }),
+  // Fetch from all sources in parallel using Promise.allSettled
+  // so one source failing never blocks the other
+  const results = await Promise.allSettled([
+    fetchRemoteOK(),
+    fetchArbeitnow(),
   ]);
 
-  const allJobs = [...remoteOKJobs, ...arbeitnowJobs];
-  console.log(`[scraper] Total fetched: ${allJobs.length} jobs`);
+  const allJobs: Omit<JobCard, "id">[] = [];
+  const sourceNames = ["RemoteOK", "Arbeitnow"];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      allJobs.push(...result.value);
+    } else {
+      errors.push(`${sourceNames[i]}: ${String(result.reason)}`);
+    }
+  }
+  logger.info("Total fetched from all sources", { totalFetched: allJobs.length });
 
   if (allJobs.length === 0) {
     return { fetched: 0, newJobs: 0, duplicates: 0, errors };
   }
 
-  // Deduplicate against existing jobs in Firestore
+  // Deduplicate against existing jobs in Firestore.
+  // Only check jobs from the last 30 days to avoid loading the entire collection.
   const jobsCol = db.collection("jobs");
-  const existingSnap = await jobsCol.select("company", "role", "location").get();
+  const thirtyDaysAgo = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000
+  ).toISOString();
+  const existingSnap = await jobsCol
+    .where("createdAt", ">=", thirtyDaysAgo)
+    .select("company", "role", "location")
+    .get();
   const existingKeys = new Set(
     existingSnap.docs.map((doc) => {
       const d = doc.data();
@@ -226,9 +238,7 @@ export async function scrapeJobs(
   }
 
   const duplicates = allJobs.length - newJobs.length;
-  console.log(
-    `[scraper] ${newJobs.length} new, ${duplicates} duplicates skipped`
-  );
+  logger.info("Deduplication complete", { newJobs: newJobs.length, duplicates });
 
   // Write new jobs to Firestore in batches of 500 (Firestore limit)
   const BATCH_SIZE = 500;
@@ -240,9 +250,10 @@ export async function scrapeJobs(
       batch.set(ref, { ...job, id: ref.id });
     }
     await batch.commit();
-    console.log(
-      `[scraper] Wrote batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} jobs)`
-    );
+    logger.info("Wrote batch to Firestore", {
+      batch: Math.floor(i / BATCH_SIZE) + 1,
+      count: chunk.length,
+    });
   }
 
   return {

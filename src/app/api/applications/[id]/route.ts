@@ -1,34 +1,27 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
 import { withdrawApplication } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireAuth,
+  handleError,
+} from "@/lib/api-utils";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const user = await requireAuth(request);
     const { id } = await params;
     const body = await request.json();
 
     if (body.status === "withdrawn") {
       await withdrawApplication(id, user.uid);
-      return NextResponse.json({ ok: true });
+      return apiSuccess({ withdrawn: true });
     }
 
-    return NextResponse.json(
-      { error: "Invalid status update" },
-      { status: 400 }
-    );
+    return apiError("Invalid status update", "VALIDATION_ERROR", 400);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to update application";
-    const status = message === "Application not found" ? 404 : 500;
-    console.error("PATCH /api/applications/[id] error:", err);
-    return NextResponse.json({ error: message }, { status });
+    return handleError(err, "PATCH /api/applications/[id]");
   }
 }

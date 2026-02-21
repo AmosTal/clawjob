@@ -1,72 +1,96 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getUser, createJob, getEmployerJobs } from "@/lib/db";
+import { createJob, getEmployerJobs } from "@/lib/db";
+import {
+  apiSuccess,
+  apiError,
+  requireEmployer,
+  handleError,
+} from "@/lib/api-utils";
+import {
+  validateString,
+  validateStringArray,
+  validateURL,
+  sanitizeString,
+  LIMITS,
+} from "@/lib/validation";
 
-async function verifyEmployer(request: Request) {
-  const authUser = await verifyAuth(request);
-  if (!authUser) return null;
-  const profile = await getUser(authUser.uid);
-  if (!profile || profile.role !== "employer") return null;
-  return { ...authUser, profile };
-}
+const NO_CACHE = { "Cache-Control": "private, no-cache" };
 
 export async function GET(request: Request) {
-  const employer = await verifyEmployer(request);
-  if (!employer) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const employer = await requireEmployer(request);
     const jobs = await getEmployerJobs(employer.uid);
-    return NextResponse.json(jobs);
+    return apiSuccess(jobs, 200, NO_CACHE);
   } catch (err) {
-    console.error("GET /api/employer/jobs error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch jobs" },
-      { status: 500 }
-    );
+    return handleError(err, "GET /api/employer/jobs");
   }
 }
 
 export async function POST(request: Request) {
-  const employer = await verifyEmployer(request);
-  if (!employer) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const employer = await requireEmployer(request);
     const body = await request.json();
-    const { role, company, location, salary, description, requirements, benefits, tags, manager, hr, teamSize, culture, companyLogo } = body;
+
+    // Validate required fields
+    const role = validateString(body.role, LIMITS.title);
+    const company = validateString(body.company, LIMITS.company);
+    const location = validateString(body.location, LIMITS.location);
 
     if (!role || !company || !location) {
-      return NextResponse.json(
-        { error: "role, company, and location are required" },
-        { status: 400 }
+      return apiError(
+        "role, company, and location are required",
+        "VALIDATION_ERROR",
+        400
       );
     }
+
+    // Validate optional fields
+    const salary = validateString(body.salary, LIMITS.salary) ?? undefined;
+    const description = validateString(body.description, LIMITS.description) ?? undefined;
+    const requirements = validateStringArray(body.requirements, LIMITS.maxRequirements, LIMITS.requirement);
+    const benefits = validateStringArray(body.benefits, LIMITS.maxBenefits, LIMITS.benefit);
+    const tags = validateStringArray(body.tags, LIMITS.maxTags, LIMITS.tag);
+    const culture = validateStringArray(body.culture, LIMITS.maxCulture, LIMITS.culture);
+    const teamSize = validateString(body.teamSize, LIMITS.teamSize) ?? undefined;
+    const companyLogo = validateURL(body.companyLogo) ?? undefined;
+
+    // Validate nested manager object
+    const manager = body.manager && typeof body.manager === "object"
+      ? {
+          name: sanitizeString(body.manager.name ?? "").slice(0, LIMITS.name),
+          title: sanitizeString(body.manager.title ?? "").slice(0, LIMITS.title),
+          tagline: sanitizeString(body.manager.tagline ?? "").slice(0, LIMITS.tagline),
+          photo: validateURL(body.manager.photo) ?? "",
+        }
+      : { name: "", title: "", tagline: "", photo: "" };
+
+    // Validate nested hr object
+    const hr = body.hr && typeof body.hr === "object"
+      ? {
+          name: sanitizeString(body.hr.name ?? "").slice(0, LIMITS.name),
+          title: sanitizeString(body.hr.title ?? "").slice(0, LIMITS.title),
+          photo: validateURL(body.hr.photo) ?? "",
+          email: sanitizeString(body.hr.email ?? "").slice(0, LIMITS.email),
+        }
+      : { name: "", title: "", photo: "", email: "" };
 
     const id = await createJob(employer.uid, {
       role,
       company,
       location,
-      salary: salary || undefined,
-      description: description || undefined,
-      requirements: requirements || [],
-      benefits: benefits || [],
-      tags: tags || [],
-      manager: manager || { name: "", title: "", tagline: "", photo: "" },
-      hr: hr || { name: "", title: "", photo: "", email: "" },
-      teamSize: teamSize || undefined,
-      culture: culture || [],
-      companyLogo: companyLogo || undefined,
+      salary,
+      description,
+      requirements,
+      benefits,
+      tags,
+      manager,
+      hr,
+      teamSize,
+      culture,
+      companyLogo,
     });
 
-    return NextResponse.json({ id }, { status: 201 });
+    return apiSuccess({ id }, 201);
   } catch (err) {
-    console.error("POST /api/employer/jobs error:", err);
-    return NextResponse.json(
-      { error: "Failed to create job" },
-      { status: 500 }
-    );
+    return handleError(err, "POST /api/employer/jobs");
   }
 }
