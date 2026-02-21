@@ -27,7 +27,7 @@ export default function EmployerLayoutClient({
   };
 
   return (
-    <div className="pb-[70px]">
+    <div className="pb-[calc(74px+env(safe-area-inset-bottom))]">
       {children}
       <EmployerNav activeTab={activeTab} onNavigate={handleNavigate} />
     </div>

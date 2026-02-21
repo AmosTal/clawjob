@@ -18,7 +18,7 @@ export default function AdminSettingsPage() {
         className="space-y-6"
       >
         {/* General */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 space-y-4">
           <h2 className="text-sm font-semibold text-zinc-300">General</h2>
           <div className="space-y-4">
             <div>
@@ -28,7 +28,7 @@ export default function AdminSettingsPage() {
               <input
                 type="text"
                 defaultValue="MyWhisper"
-                className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-colors"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-200 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
               />
             </div>
             <div>
@@ -38,14 +38,14 @@ export default function AdminSettingsPage() {
               <input
                 type="email"
                 placeholder="support@mywhisper.com"
-                className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
               />
             </div>
           </div>
         </div>
 
         {/* Moderation */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 space-y-4">
           <h2 className="text-sm font-semibold text-zinc-300">Moderation</h2>
           <div className="space-y-3">
             <label className="flex items-center justify-between">
@@ -55,8 +55,8 @@ export default function AdminSettingsPage() {
                   Automatically approve new job listings
                 </p>
               </div>
-              <div className="w-10 h-6 rounded-full bg-emerald-500 relative cursor-pointer">
-                <div className="absolute right-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform" />
+              <div className="relative h-6 w-11 shrink-0 rounded-full bg-emerald-500 cursor-pointer transition-colors">
+                <span className="absolute right-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" />
               </div>
             </label>
             <label className="flex items-center justify-between">
@@ -66,8 +66,8 @@ export default function AdminSettingsPage() {
                   Users must verify email before applying
                 </p>
               </div>
-              <div className="w-10 h-6 rounded-full bg-zinc-700 relative cursor-pointer">
-                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform" />
+              <div className="relative h-6 w-11 shrink-0 rounded-full bg-zinc-600 cursor-pointer transition-colors">
+                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" />
               </div>
             </label>
           </div>
@@ -80,10 +80,10 @@ export default function AdminSettingsPage() {
             These actions are destructive and cannot be reversed.
           </p>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/10 transition-colors">
+            <button className="rounded-xl border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10">
               Purge Inactive Jobs
             </button>
-            <button className="px-4 py-2 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/10 transition-colors">
+            <button className="rounded-xl border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10">
               Reset Platform
             </button>
           </div>

@@ -3,6 +3,8 @@
 :root {
   --background: #09090b;
   --foreground: #fafafa;
+  --card: #18181b;
+  --card-border: rgba(63, 63, 70, 0.5);
 }
 
 @theme inline {
@@ -14,12 +16,25 @@
 
 html {
   scroll-behavior: smooth;
+  /* Prevent overscroll bounce on the entire page */
+  overscroll-behavior-y: none;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Prevent horizontal overflow on mobile */
+  overflow-x: hidden;
+  /* Remove tap highlight on all mobile browsers */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent auto-zoom on input focus in iOS (font-size must be >= 16px) */
+input,
+textarea,
+select {
+  font-size: 16px;
 }
 
 ::selection {
@@ -73,4 +88,55 @@ body {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Focus-visible styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid rgba(52, 211, 153, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove focus ring for mouse/touch users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Prefers reduced motion — disable all animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-shimmer,
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping {
+    animation: none !important;
+  }
+}
+
+/* Skip navigation link — visible only on focus */
+.skip-nav {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  background: #10b981;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+.skip-nav:focus {
+  top: 0;
 }

@@ -53,10 +53,14 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
     <motion.div
       className="relative w-full overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.08]"
       style={{ height: "calc(100dvh - 340px)", minHeight: "200px", maxHeight: "400px", cursor: onTap ? "pointer" : undefined }}
-      initial={{ scale: 0.95, opacity: 0 }}
+      initial={{ scale: 0.96, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ type: "spring", stiffness: 300, damping: 24, mass: 0.8 }}
       onClick={onTap}
+      onKeyDown={onTap ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTap(); } } : undefined}
+      role={onTap ? "button" : undefined}
+      tabIndex={onTap ? 0 : undefined}
+      aria-label={onTap ? `View details for ${manager.name || "Hiring Manager"} at ${company || "company"}` : undefined}
     >
       {/* Skeleton loading state */}
       <AnimatePresence>
@@ -111,9 +115,9 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
           {!photoFailed && (
             <motion.div
               className="absolute inset-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: photoLoaded ? 1 : 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              initial={{ opacity: 0, scale: 1.04 }}
+              animate={{ opacity: photoLoaded ? 1 : 0, scale: photoLoaded ? 1 : 1.04 }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -128,9 +132,9 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
         </>
       )}
 
-      {/* Gradient overlay — stronger for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
+      {/* Gradient overlay — rich for text readability on varied photos */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/5" />
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent" />
 
       {/* Company badge — glass morphism */}
       {company && (
@@ -163,7 +167,7 @@ export default function ManagerHero({ manager, company, companyLogo, onTap }: Ma
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/40" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white/50" />
           </span>
-          <p className="text-[10px] font-medium tracking-wide text-white/50">Tap to learn more</p>
+          <p className="text-[10px] font-medium tracking-wide text-white/60">Tap for details</p>
         </div>
       </div>
     </motion.div>

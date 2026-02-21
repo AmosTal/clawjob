@@ -88,29 +88,35 @@ export default function FilterBar({
   }
 
   const chipBase =
-    "rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-200 whitespace-nowrap select-none cursor-pointer";
+    "rounded-full px-3.5 py-2 text-xs font-medium border transition-all duration-200 whitespace-nowrap select-none cursor-pointer touch-manipulation min-h-[36px]";
   const chipInactive =
     "bg-zinc-800/80 text-zinc-400 border-zinc-700/80 hover:border-zinc-500 hover:bg-zinc-800";
   const chipActive =
     "bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-sm shadow-emerald-500/10";
 
   const dropdownMotion = {
-    initial: { opacity: 0, y: -8, scale: 0.95 },
+    initial: { opacity: 0, y: -6, scale: 0.96 },
     animate: { opacity: 1, y: 0, scale: 1 },
-    exit: { opacity: 0, y: -8, scale: 0.95 },
-    transition: { type: "spring" as const, stiffness: 400, damping: 25 },
+    exit: { opacity: 0, y: -6, scale: 0.96, transition: { duration: 0.15, ease: [0.32, 0, 0.67, 0] as const } },
+    transition: { type: "spring" as const, stiffness: 420, damping: 28, mass: 0.7 },
   };
 
   return (
     <div ref={barRef} className="relative mb-3">
       {/* Chip row */}
       <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          Filter
+        </span>
+        <div className="h-3 w-px shrink-0 bg-zinc-700/50" />
         {/* Remote toggle */}
         <motion.button
           onClick={toggleRemote}
           className={`${chipBase} ${filters.remote ? chipActive : chipInactive}`}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.93 }}
           layout
+          aria-pressed={filters.remote}
+          aria-label="Filter by remote jobs"
         >
           {filters.remote && (
             <svg
@@ -136,8 +142,11 @@ export default function FilterBar({
             setOpenDropdown(openDropdown === "location" ? null : "location")
           }
           className={`${chipBase} ${filters.location ? chipActive : chipInactive}`}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.93 }}
           layout
+          aria-expanded={openDropdown === "location"}
+          aria-haspopup="listbox"
+          aria-label={`Filter by location${filters.location ? `: ${filters.location}` : ""}`}
         >
           {filters.location ?? "Location"}
           <motion.svg
@@ -163,8 +172,11 @@ export default function FilterBar({
             setOpenDropdown(openDropdown === "tags" ? null : "tags")
           }
           className={`${chipBase} ${filters.tags.length > 0 ? chipActive : chipInactive}`}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.93 }}
           layout
+          aria-expanded={openDropdown === "tags"}
+          aria-haspopup="listbox"
+          aria-label={`Filter by skills${filters.tags.length > 0 ? ` (${filters.tags.length} selected)` : ""}`}
         >
           Skills{filters.tags.length > 0 ? ` (${filters.tags.length})` : ""}
           <motion.svg
@@ -194,6 +206,7 @@ export default function FilterBar({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.15 }}
+              aria-label="Clear all filters"
             >
               Clear
             </motion.button>
@@ -207,13 +220,17 @@ export default function FilterBar({
           <motion.div
             key="location-dropdown"
             {...dropdownMotion}
-            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            role="listbox"
+            aria-label="Select location"
           >
             {/* Clear location */}
             {filters.location && (
               <button
                 onClick={() => selectLocation(null)}
-                className="w-full px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                className="w-full px-3 py-2.5 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 min-h-[44px]"
+                role="option"
+                aria-selected={false}
               >
                 All locations
               </button>
@@ -222,11 +239,13 @@ export default function FilterBar({
               <button
                 key={loc}
                 onClick={() => selectLocation(loc)}
-                className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-800 ${
+                className={`w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-zinc-800 min-h-[44px] ${
                   filters.location === loc
                     ? "text-emerald-400"
                     : "text-zinc-300"
                 }`}
+                role="option"
+                aria-selected={filters.location === loc}
               >
                 {filters.location === loc && (
                   <svg
@@ -235,6 +254,7 @@ export default function FilterBar({
                     stroke="currentColor"
                     strokeWidth={3}
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -258,7 +278,10 @@ export default function FilterBar({
           <motion.div
             key="tags-dropdown"
             {...dropdownMotion}
-            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            className="absolute left-0 top-full z-50 mt-2 max-h-60 w-56 overflow-y-auto overscroll-contain rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40"
+            role="listbox"
+            aria-label="Select skills"
+            aria-multiselectable="true"
           >
             {topTags.map((tag) => {
               const selected = filters.tags.includes(tag);
@@ -266,7 +289,9 @@ export default function FilterBar({
                 <button
                   key={tag}
                   onClick={() => toggleTag(tag)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-300 transition-colors hover:bg-zinc-800 min-h-[44px]"
+                  role="option"
+                  aria-selected={selected}
                 >
                   <motion.span
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
@@ -284,6 +309,7 @@ export default function FilterBar({
                         stroke="currentColor"
                         strokeWidth={3}
                         viewBox="0 0 24 24"
+                        aria-hidden="true"
                       >
                         <path
                           strokeLinecap="round"

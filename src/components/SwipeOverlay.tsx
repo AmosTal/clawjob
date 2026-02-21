@@ -8,22 +8,22 @@ interface SwipeOverlayProps {
 }
 
 export default function SwipeOverlay({ x, dangerousMode }: SwipeOverlayProps) {
-  const applyOpacity = useTransform(x, [0, 80, 140], [0, 0.7, 1]);
-  const skipOpacity = useTransform(x, [0, -80, -140], [0, 0.7, 1]);
+  const applyOpacity = useTransform(x, [0, 60, 130], [0, 0.6, 1]);
+  const skipOpacity = useTransform(x, [0, -60, -130], [0, 0.6, 1]);
 
-  // Scale stamps up as swipe intensifies
-  const applyScale = useTransform(x, [0, 80, 160], [0.5, 0.9, 1.1]);
-  const skipScale = useTransform(x, [0, -80, -160], [0.5, 0.9, 1.1]);
+  // Scale stamps up as swipe intensifies — tighter range for snappier feel
+  const applyScale = useTransform(x, [0, 60, 150], [0.6, 0.95, 1.08]);
+  const skipScale = useTransform(x, [0, -60, -150], [0.6, 0.95, 1.08]);
 
-  // Color wash overlays
-  const rightTintOpacity = useTransform(x, [0, 100, 180], [0, 0.08, 0.18]);
-  const leftTintOpacity = useTransform(x, [0, -100, -180], [0, 0.08, 0.18]);
+  // Color wash overlays — kick in earlier for immediate feedback
+  const rightTintOpacity = useTransform(x, [0, 70, 160], [0, 0.1, 0.2]);
+  const leftTintOpacity = useTransform(x, [0, -70, -160], [0, 0.1, 0.2]);
 
   const rightLabel = dangerousMode ? "Apply" : "Save";
   const rightColor = dangerousMode ? "emerald" : "amber";
 
   return (
-    <>
+    <div aria-hidden="true">
       {/* Right swipe color wash */}
       <motion.div
         className={`pointer-events-none absolute inset-0 z-[9] rounded-2xl ${
@@ -85,6 +85,6 @@ export default function SwipeOverlay({ x, dangerousMode }: SwipeOverlayProps) {
           Skip
         </motion.span>
       </motion.div>
-    </>
+    </div>
   );
 }

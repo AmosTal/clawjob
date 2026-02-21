@@ -49,8 +49,8 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
   const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18]);
   const opacity = useTransform(x, [-300, -100, 0, 100, 300], [0, 1, 1, 1, 0]);
 
-  // Spring-based side indicator transforms for a fluid, bouncy feel
-  const springConfig = { stiffness: 200, damping: 20, mass: 0.8 };
+  // Spring-based side indicator transforms — critically damped for a responsive, physical feel
+  const springConfig = { stiffness: 280, damping: 26, mass: 0.6 };
 
   const rawSkipOpacity = useTransform(x, [0, -60, -140], [0.25, 0.6, 1]);
   const rawSkipScale = useTransform(x, [0, -60, -140], [0.9, 1.05, 1.25]);
@@ -278,20 +278,20 @@ export default function SwipeDeck({ jobs, loading, dangerousMode }: SwipeDeckPro
               dragElastic={0.9}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              initial={{ scale: 0.92, opacity: 0 }}
+              initial={{ scale: 0.88, opacity: 0, y: 12 }}
               animate={
                 exitDirection
                   ? {
                       x: exitDirection === "right" ? 500 : -500,
-                      rotate: exitDirection === "right" ? 20 : -20,
+                      rotate: exitDirection === "right" ? 18 : -18,
                       opacity: 0,
                     }
-                  : { scale: 1, opacity: 1 }
+                  : { scale: 1, opacity: 1, y: 0 }
               }
               transition={
                 exitDirection
-                  ? { duration: 0.35, ease: "easeIn" }
-                  : { type: "spring", stiffness: 300, damping: 25 }
+                  ? { duration: 0.3, ease: [0.32, 0, 0.67, 0] }
+                  : { type: "spring", stiffness: 350, damping: 28, mass: 0.8 }
               }
               onAnimationComplete={() => {
                 if (exitDirection) advance();

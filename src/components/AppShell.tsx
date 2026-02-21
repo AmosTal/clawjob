@@ -22,7 +22,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="pb-[calc(70px+env(safe-area-inset-bottom))]">
+    <div className="pb-[calc(74px+env(safe-area-inset-bottom))]">
       {children}
       <BottomNav activeTab={activeTab} onNavigate={handleNavigate} />
     </div>

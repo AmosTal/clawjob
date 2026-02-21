@@ -16,8 +16,13 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
 
   return (
     <motion.div
-      className="mx-auto w-full cursor-pointer overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900"
+      className="mx-auto w-full cursor-pointer overflow-hidden rounded-xl border border-zinc-700/50 bg-zinc-900"
       onClick={() => setExpanded((e) => !e)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((v) => !v); } }}
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-label={`${hr.name || "Recruiter"} contact info, ${expanded ? "collapse" : "expand"}`}
       layout
     >
       {/* Compact single-line bar */}
@@ -62,13 +67,13 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
           <p className="truncate text-sm font-semibold text-white">
             {hr.name || "Recruiter"}
           </p>
-          <p className="truncate text-xs text-zinc-500">
+          <p className="truncate text-xs text-zinc-400">
             {hr.title || "Talent Acquisition"}
           </p>
         </div>
 
         {/* Hint */}
-        <span className="shrink-0 text-[11px] text-zinc-600">
+        <span className="shrink-0 text-[11px] text-zinc-400">
           {expanded ? "Close" : "Contact"}
         </span>
 
@@ -82,9 +87,10 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="shrink-0 text-zinc-600"
+          className="shrink-0 text-zinc-400"
           animate={{ rotate: expanded ? 180 : 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          transition={{ type: "spring", stiffness: 350, damping: 22, mass: 0.6 }}
+          aria-hidden="true"
         >
           <polyline points="6 9 12 15 18 9" />
         </motion.svg>
@@ -96,15 +102,15 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            exit={{ height: 0, opacity: 0, transition: { duration: 0.2, ease: [0.32, 0, 0.67, 0] } }}
+            transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.7 }}
             className="overflow-hidden"
           >
             <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 px-4 py-3 min-w-0">
               {hr.email && (
                 <a
                   href={`mailto:${hr.email}`}
-                  className="flex min-w-0 items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-emerald-400 transition-colors hover:bg-zinc-700"
+                  className="flex min-w-0 items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-emerald-400 transition-colors hover:bg-zinc-700 touch-manipulation min-h-[36px]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg
@@ -126,7 +132,7 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
               {hr.phone && (
                 <a
                   href={`tel:${hr.phone}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-emerald-400 transition-colors hover:bg-zinc-700"
+                  className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-emerald-400 transition-colors hover:bg-zinc-700 touch-manipulation min-h-[36px]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg
@@ -144,15 +150,18 @@ export default function HRFlipCard({ hr, companyLogo }: HRFlipCardProps) {
                   {hr.phone}
                 </a>
               )}
-              <button
-                className="ml-auto rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-emerald-600/20 transition-colors hover:bg-emerald-500"
+              <motion.button
+                className="ml-auto rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-600/20 transition-colors hover:bg-emerald-500 touch-manipulation min-h-[36px]"
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (hr.email) window.open(`mailto:${hr.email}`);
                 }}
               >
                 Contact Recruiter
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         )}

@@ -59,7 +59,7 @@ export default function RoleSelectScreen() {
             claw<span className="text-emerald-400">job</span>
           </h1>
           <p className="mt-2 text-sm text-zinc-400">
-            How will you be using clawjob?
+            Choose how you want to get started
           </p>
         </motion.div>
 
@@ -72,7 +72,7 @@ export default function RoleSelectScreen() {
             whileTap={{ scale: 0.97 }}
             onClick={() => selectRole("seeker")}
             disabled={loading !== null}
-            className="group w-full rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60"
+            className="group w-full rounded-2xl border border-zinc-700/40 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60 touch-manipulation min-h-[48px]"
           >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
               <svg
@@ -81,6 +81,7 @@ export default function RoleSelectScreen() {
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -99,7 +100,7 @@ export default function RoleSelectScreen() {
                 "I'm looking for a job"
               )}
             </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-zinc-300">
               Browse and swipe on job opportunities from top companies
             </p>
           </motion.button>
@@ -111,7 +112,7 @@ export default function RoleSelectScreen() {
             whileTap={{ scale: 0.97 }}
             onClick={() => selectRole("employer")}
             disabled={loading !== null}
-            className="group w-full rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60"
+            className="group w-full rounded-2xl border border-zinc-700/40 bg-zinc-900 p-6 text-left transition-colors hover:border-emerald-500/30 hover:bg-zinc-900/80 disabled:opacity-60 touch-manipulation min-h-[48px]"
           >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
               <svg
@@ -120,6 +121,7 @@ export default function RoleSelectScreen() {
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -138,19 +140,29 @@ export default function RoleSelectScreen() {
                 "I'm hiring"
               )}
             </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-zinc-300">
               Post jobs and find great candidates for your team
             </p>
           </motion.button>
         </div>
+
+        {/* Reassurance hint */}
+        <motion.p
+          variants={fadeUp}
+          transition={{ duration: 0.5 }}
+          className="mt-4 text-center text-xs text-zinc-600"
+        >
+          You can switch roles anytime in your profile settings
+        </motion.p>
 
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-500/10 px-3 py-2.5"
+            role="alert"
           >
-            <svg className="h-4 w-4 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-4 w-4 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
             </svg>
             <p className="text-sm text-red-400">{error}</p>

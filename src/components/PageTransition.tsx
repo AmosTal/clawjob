@@ -16,10 +16,10 @@ export default function PageTransition({
     <AnimatePresence mode="wait">
       <motion.div
         key={transitionKey}
-        initial={{ x: 20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: -20, opacity: 0 }}
-        transition={{ duration: 0.25, ease: "easeOut" }}
+        initial={{ x: 16, opacity: 0, filter: "blur(4px)" }}
+        animate={{ x: 0, opacity: 1, filter: "blur(0px)" }}
+        exit={{ x: -16, opacity: 0, filter: "blur(4px)", transition: { duration: 0.18, ease: [0.32, 0, 0.67, 0] } }}
+        transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
       >
         {children}
       </motion.div>

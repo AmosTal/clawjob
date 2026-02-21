@@ -77,8 +77,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <a href="#main-content" className="skip-nav">
+          Skip to main content
+        </a>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <main id="main-content">{children}</main>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

@@ -110,13 +110,13 @@ export default function AdminUsersPage() {
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-emerald-500/50 transition-colors"
+          className="rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-300 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
         >
           <option value="all">All Roles</option>
           <option value="seeker">Seekers</option>
@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* User Cards / Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
         {loading ? (
           <div className="divide-y divide-zinc-800/50">
             {[...Array(5)].map((_, i) => (
@@ -215,7 +215,7 @@ export default function AdminUsersPage() {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="px-3 py-1.5 text-xs rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -224,7 +224,7 @@ export default function AdminUsersPage() {
                   setPage((p) => Math.min(totalPages - 1, p + 1))
                 }
                 disabled={page >= totalPages - 1}
-                className="px-3 py-1.5 text-xs rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 space-y-5"
+            className="relative rounded-xl border border-zinc-800 bg-zinc-900 p-6 max-w-md w-full mx-4 space-y-5"
           >
             {/* Close button */}
             <button
@@ -312,7 +312,7 @@ export default function AdminUsersPage() {
 
             <button
               onClick={() => setSelectedUser(null)}
-              className="w-full px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
             >
               Close
             </button>

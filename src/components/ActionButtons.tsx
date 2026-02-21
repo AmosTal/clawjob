@@ -12,8 +12,9 @@ interface ActionButtonsProps {
 
 const bounceTransition = {
   type: "spring" as const,
-  stiffness: 500,
-  damping: 15,
+  stiffness: 400,
+  damping: 17,
+  mass: 0.8,
 };
 
 export default function ActionButtons({
@@ -28,9 +29,9 @@ export default function ActionButtons({
       {/* Skip button */}
       <div className="flex flex-col items-center gap-1.5">
         <motion.button
-          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/5 transition-colors hover:bg-red-500/20 active:bg-red-500/30"
-          whileTap={{ scale: 0.85 }}
-          whileHover={{ scale: 1.08 }}
+          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-red-500/40 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/5 transition-colors hover:bg-red-500/20 active:bg-red-500/30 touch-manipulation"
+          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.06 }}
           transition={bounceTransition}
           onClick={onSkip}
           aria-label="Skip this job"
@@ -59,9 +60,9 @@ export default function ActionButtons({
         /* Dangerous mode: center = Save (amber bookmark) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
-            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30"
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ scale: 1.08 }}
+            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30 touch-manipulation"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
             onClick={onSave}
             aria-label="Save this job"
@@ -87,9 +88,9 @@ export default function ActionButtons({
         /* Safe mode: center = Apply (emerald heart) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
-            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30"
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ scale: 1.08 }}
+            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30 touch-manipulation"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
             onClick={onApply}
             aria-label="Apply to this job"
@@ -118,9 +119,9 @@ export default function ActionButtons({
         /* Dangerous mode: right = Apply (emerald heart) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30"
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ scale: 1.08 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-colors hover:bg-emerald-500/20 active:bg-emerald-500/30 touch-manipulation"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
             onClick={onSwipeRight}
             aria-label="Apply to this job"
@@ -146,9 +147,9 @@ export default function ActionButtons({
         /* Safe mode: right = Save (amber bookmark) */
         <div className="flex flex-col items-center gap-1.5">
           <motion.button
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30"
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ scale: 1.08 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-500/40 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/5 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30 touch-manipulation"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
             onClick={onSwipeRight}
             aria-label="Save this job"

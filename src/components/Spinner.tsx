@@ -15,6 +15,8 @@ export default function Spinner({ size = "md", color = "emerald" }: SpinnerProps
       className={`${sizeMap[size]} animate-spin text-${color}-500`}
       viewBox="0 0 24 24"
       fill="none"
+      role="status"
+      aria-label="Loading"
     >
       <circle
         className="opacity-25"

@@ -98,21 +98,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[100] flex flex-col items-center gap-2">
+      <div
+        className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[100] flex flex-col items-center gap-2"
+        aria-live="assertive"
+        aria-atomic="false"
+      >
         <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
               layout
-              initial={{ opacity: 0, y: -40, scale: 0.85 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.15 } }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              initial={{ opacity: 0, y: -32, scale: 0.9, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -16, scale: 0.95, filter: "blur(2px)", transition: { duration: 0.2, ease: [0.32, 0, 0.67, 0] } }}
+              transition={{ type: "spring", stiffness: 380, damping: 22, mass: 0.8 }}
               className={`pointer-events-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white shadow-lg ${bgColors[toast.type]}`}
               onClick={() => removeToast(toast.id)}
               role="alert"
             >
-              {icons[toast.type]}
+              <span aria-hidden="true">{icons[toast.type]}</span>
               {toast.message}
             </motion.div>
           ))}

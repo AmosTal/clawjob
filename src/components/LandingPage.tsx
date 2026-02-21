@@ -6,18 +6,18 @@ import { motion, useInView } from "framer-motion";
 import { APP_VERSION, APP_NAME } from "@/lib/constants";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 24, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)" },
 };
 
 const stagger = {
-  visible: { transition: { staggerChildren: 0.12 } },
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
 
 const features = [
   {
     icon: (
-      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
       </svg>
     ),
@@ -26,7 +26,7 @@ const features = [
   },
   {
     icon: (
-      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
       </svg>
     ),
@@ -35,7 +35,7 @@ const features = [
   },
   {
     icon: (
-      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15A1.5 1.5 0 0 1 21 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5v-15A1.5 1.5 0 0 1 4.5 3Zm6 6h3m-3 3h3m-3 3h3m-6-6h.008v.008H7.5V9Zm0 3h.008v.008H7.5V12Zm0 3h.008v.008H7.5V15Z" />
       </svg>
     ),
@@ -44,7 +44,7 @@ const features = [
   },
   {
     icon: (
-      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
       </svg>
     ),
@@ -66,20 +66,20 @@ function AnimatedStat({ value, label }: { value: string; label: string }) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={inView ? { opacity: 1, scale: 1 } : {}}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      initial={{ opacity: 0, scale: 0.85, y: 12 }}
+      animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
+      transition={{ type: "spring", stiffness: 300, damping: 22, mass: 0.8 }}
       className="text-center"
     >
       <div className="text-3xl font-black text-white sm:text-4xl">{value}</div>
-      <div className="mt-1 text-sm text-zinc-400">{label}</div>
+      <div className="mt-1 text-sm text-zinc-300">{label}</div>
     </motion.div>
   );
 }
 
 function PhoneMockup() {
   return (
-    <div className="relative mx-auto w-[220px] sm:w-[260px]">
+    <div className="relative mx-auto w-[220px] sm:w-[260px]" aria-hidden="true">
       {/* Phone frame */}
       <div className="rounded-[2rem] border-2 border-zinc-700/50 bg-zinc-900 p-2 shadow-2xl shadow-emerald-500/5">
         {/* Screen */}
@@ -148,7 +148,7 @@ export default function LandingPage() {
           </div>
           <Link
             href="/signin"
-            className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
+            className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white touch-manipulation min-h-[44px] flex items-center"
           >
             Sign In
           </Link>
@@ -189,7 +189,7 @@ export default function LandingPage() {
               <motion.p
                 variants={fadeUp}
                 transition={{ duration: 0.6 }}
-                className="mt-5 max-w-lg text-base text-zinc-400 sm:text-lg"
+                className="mt-5 max-w-lg text-base text-zinc-300 sm:text-lg"
               >
                 The fastest way to discover, apply, and land your next career opportunity. Job hunting, reimagined.
               </motion.p>
@@ -203,10 +203,10 @@ export default function LandingPage() {
                   <motion.span
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.97 }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 touch-manipulation min-h-[48px]"
                   >
                     Get Started Free
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                     </svg>
                   </motion.span>
@@ -239,7 +239,7 @@ export default function LandingPage() {
             <h2 className="text-center text-2xl font-bold text-white sm:text-3xl">
               Everything you need to land your next role
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-center text-zinc-400">
+            <p className="mx-auto mt-3 max-w-lg text-center text-zinc-300">
               Built for modern job seekers and employers who value speed, simplicity, and smart technology.
             </p>
           </FadeInSection>
@@ -256,13 +256,14 @@ export default function LandingPage() {
                 key={f.title}
                 variants={fadeUp}
                 transition={{ duration: 0.5 }}
-                className="group rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 backdrop-blur transition-all hover:border-emerald-500/30 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-emerald-500/5"
+                whileHover={{ scale: 1.02, y: -2 }}
+                className="group rounded-2xl border border-zinc-700/40 bg-zinc-900/60 p-6 backdrop-blur transition-all hover:border-emerald-500/30 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-emerald-500/5"
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/20">
                   {f.icon}
                 </div>
                 <h3 className="text-lg font-semibold text-white">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{f.description}</p>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-300">{f.description}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -285,7 +286,7 @@ export default function LandingPage() {
             <h2 className="text-2xl font-bold text-white sm:text-3xl">
               Ready to start swiping?
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-zinc-400">
+            <p className="mx-auto mt-3 max-w-md text-zinc-300">
               Join thousands of job seekers and employers already using {APP_NAME} to connect faster.
             </p>
             <div className="mt-8">
@@ -293,10 +294,10 @@ export default function LandingPage() {
                 <motion.span
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 touch-manipulation min-h-[48px]"
                 >
                   Create Free Account
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                   </svg>
                 </motion.span>
@@ -314,20 +315,20 @@ export default function LandingPage() {
               <span className="text-lg font-black tracking-tight text-white">
                 claw<span className="text-emerald-400">job</span>
               </span>
-              <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-500">
+              <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
                 v{APP_VERSION}
               </span>
             </div>
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-zinc-500">
-              <Link href="#" className="transition-colors hover:text-zinc-300">About</Link>
-              <Link href="#" className="transition-colors hover:text-zinc-300">Privacy</Link>
-              <Link href="#" className="transition-colors hover:text-zinc-300">Terms</Link>
-              <Link href="#" className="transition-colors hover:text-zinc-300">Contact</Link>
+            <div className="flex flex-wrap justify-center gap-6 text-sm text-zinc-400">
+              <Link href="#" className="transition-colors hover:text-zinc-200 touch-manipulation py-1">About</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-200 touch-manipulation py-1">Privacy</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-200 touch-manipulation py-1">Terms</Link>
+              <Link href="#" className="transition-colors hover:text-zinc-200 touch-manipulation py-1">Contact</Link>
             </div>
           </div>
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-zinc-600">
+          <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-zinc-500">
             <span>Built with</span>
-            <svg className="h-3 w-3 text-red-400" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="h-3 w-3 text-red-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
             </svg>
             <span>using Next.js & Firebase</span>
@@ -345,9 +346,9 @@ function FadeInSection({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 24, filter: "blur(4px)" }}
+      animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+      transition={{ type: "spring", stiffness: 200, damping: 22, mass: 0.8 }}
     >
       {children}
     </motion.div>

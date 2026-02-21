@@ -10,10 +10,11 @@ interface BottomNavProps {
 const tabs = [
   {
     id: "swipe",
-    label: "Swipe",
+    label: "Discover",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
+        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
       </svg>
     ),
   },
@@ -28,15 +29,10 @@ const tabs = [
   },
   {
     id: "applications",
-    label: "Applied",
+    label: "Activity",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6" />
-        <line x1="8" y1="12" x2="21" y2="12" />
-        <line x1="8" y1="18" x2="21" y2="18" />
-        <line x1="3" y1="6" x2="3.01" y2="6" />
-        <line x1="3" y1="12" x2="3.01" y2="12" />
-        <line x1="3" y1="18" x2="3.01" y2="18" />
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
       </svg>
     ),
   },
@@ -56,9 +52,8 @@ export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
   const activeIndex = tabs.findIndex((t) => t.id === activeTab);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-xl">
-      {/* Safe area padding for iOS */}
-      <div className="relative flex h-[60px] items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-700/50 bg-zinc-900/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.3)]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="relative flex h-[64px] items-center justify-around">
         {/* Sliding active pill */}
         <motion.div
           className="absolute top-1.5 h-[3px] w-[40px] rounded-full bg-emerald-500"
@@ -75,20 +70,18 @@ export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
               key={tab.id}
               whileTap={{ scale: 0.85 }}
               onClick={() => onNavigate(tab.id)}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 h-full transition-colors ${
-                isActive ? "text-emerald-400" : "text-zinc-500"
+              className={`flex flex-1 flex-col items-center justify-center gap-1 h-full min-h-[48px] touch-manipulation transition-colors ${
+                isActive ? "text-emerald-400" : "text-zinc-400"
               }`}
               aria-label={tab.label}
               aria-current={isActive ? "page" : undefined}
             >
-              {tab.icon}
+              <span aria-hidden="true">{tab.icon}</span>
               <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
             </motion.button>
           );
         })}
       </div>
-      {/* iOS safe area bottom padding */}
-      <div className="h-[env(safe-area-inset-bottom)]" />
     </nav>
   );
 }

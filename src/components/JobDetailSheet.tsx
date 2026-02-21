@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import type { JobCard } from "@/lib/types";
 
@@ -30,11 +30,44 @@ export default function JobDetailSheet({
 }: JobDetailSheetProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setShowDetails(false);
     setLogoFailed(false);
   }, [isOpen]);
+
+  // Focus trap and Escape key handling for modal
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onClose();
+      return;
+    }
+    if (e.key !== "Tab" || !sheetRef.current) return;
+    const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener("keydown", handleKeyDown);
+    const timer = setTimeout(() => sheetRef.current?.focus(), 100);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(timer);
+    };
+  }, [isOpen, handleKeyDown]);
 
   if (!job) return null;
 
@@ -56,26 +89,31 @@ export default function JobDetailSheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             onClick={onClose}
           />
 
           {/* Sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-zinc-900 shadow-2xl"
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Job details: ${job.role} at ${job.company}`}
+            tabIndex={-1}
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-zinc-900 shadow-2xl outline-none"
             style={{ maxHeight: "85vh" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            exit={{ y: "100%", transition: { duration: 0.25, ease: [0.32, 0, 0.67, 0] } }}
+            transition={{ type: "spring", damping: 32, stiffness: 340, mass: 0.9 }}
             drag="y"
             dragConstraints={{ top: 0 }}
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
           >
-            {/* Grab handle */}
-            <div className="flex shrink-0 justify-center pt-3 pb-2 touch-none">
-              <div className="h-1.5 w-10 rounded-full bg-zinc-600" />
+            {/* Grab handle — enlarged touch area for ergonomic drag */}
+            <div className="flex shrink-0 justify-center pt-3 pb-3 touch-none cursor-grab active:cursor-grabbing">
+              <div className="h-1.5 w-10 rounded-full bg-zinc-500" />
             </div>
 
             {/* Scrollable content */}
@@ -115,7 +153,7 @@ export default function JobDetailSheet({
                 {job.role}
               </h2>
 
-              {/* Info row */}
+              {/* Key details */}
               <div className="mb-4 flex flex-wrap gap-2">
                 {job.location && (
                   <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
@@ -128,6 +166,7 @@ export default function JobDetailSheet({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                       <circle cx="12" cy="10" r="3" />
@@ -136,7 +175,7 @@ export default function JobDetailSheet({
                   </span>
                 )}
                 {job.salary && (
-                  <span className="flex items-center gap-1.5 rounded-lg bg-zinc-800/60 px-2.5 py-1 text-sm text-zinc-400">
+                  <span className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-sm font-medium text-emerald-400">
                     <svg
                       width="14"
                       height="14"
@@ -146,6 +185,7 @@ export default function JobDetailSheet({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <line x1="12" y1="1" x2="12" y2="23" />
                       <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
@@ -164,6 +204,7 @@ export default function JobDetailSheet({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
@@ -178,7 +219,7 @@ export default function JobDetailSheet({
               {/* Hiring Manager card */}
               {job.manager && (
                 <div className="mb-4">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                     Hiring Manager
                   </h3>
                   <div className="flex items-center gap-3 rounded-xl bg-zinc-800/60 p-3">
@@ -205,15 +246,20 @@ export default function JobDetailSheet({
 
               {/* Culture tags */}
               {job.culture && job.culture.length > 0 && (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {job.culture.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                <div className="mb-4">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Culture
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.culture.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -222,8 +268,9 @@ export default function JobDetailSheet({
                 <>
                   <motion.button
                     onClick={() => setShowDetails((v) => !v)}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/80 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
-                    whileTap={{ scale: 0.98 }}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/80 py-3.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 touch-manipulation min-h-[48px]"
+                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.01 }}
                   >
                     {showDetails ? "Hide Description" : "View Full Description"}
                     <motion.svg
@@ -256,7 +303,7 @@ export default function JobDetailSheet({
                           {/* About this role */}
                           {job.description && (
                             <div className="mb-4">
-                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                                 About this role
                               </h3>
                               <p className="text-sm leading-relaxed text-zinc-300">
@@ -268,7 +315,7 @@ export default function JobDetailSheet({
                           {/* Requirements */}
                           {job.requirements && job.requirements.length > 0 && (
                             <div className="mb-4">
-                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                                 Requirements
                               </h3>
                               <ul className="space-y-2">
@@ -287,6 +334,7 @@ export default function JobDetailSheet({
                                       strokeWidth="2.5"
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
+                                      aria-hidden="true"
                                     >
                                       <polyline points="20 6 9 17 4 12" />
                                     </svg>
@@ -300,7 +348,7 @@ export default function JobDetailSheet({
                           {/* Benefits */}
                           {job.benefits && job.benefits.length > 0 && (
                             <div className="mb-4">
-                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                                 Benefits
                               </h3>
                               <ul className="space-y-2">
@@ -315,6 +363,7 @@ export default function JobDetailSheet({
                                       height="16"
                                       viewBox="0 0 24 24"
                                       fill="currentColor"
+                                      aria-hidden="true"
                                     >
                                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                                     </svg>

@@ -151,7 +151,7 @@ function SavedPageContent() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="animate-pulse rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3"
+                className="animate-pulse rounded-xl border border-zinc-700/40 bg-zinc-900 px-3 py-3"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-[60px] w-[60px] shrink-0 rounded-xl bg-zinc-800" />
@@ -187,15 +187,31 @@ function SavedPageContent() {
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
             <p className="text-lg font-bold text-zinc-300">
-              No saved jobs yet.
+              No saved jobs yet
             </p>
-            <p className="text-sm text-zinc-500">
-              Swipe right on a job card to save it!
+            <p className="mx-auto max-w-[260px] text-sm leading-relaxed text-zinc-400">
+              Swipe right on jobs you like to save them here for later. Review and apply when you are ready.
             </p>
+            <motion.button
+              onClick={() => window.location.href = "/"}
+              className="mt-2 flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20"
+              whileTap={{ scale: 0.95 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              </svg>
+              Discover Jobs
+            </motion.button>
           </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
             <div className="flex flex-col gap-3">
+              {jobs.length > 0 && (
+                <p className="text-center text-[11px] text-zinc-500">
+                  Swipe left on a card to remove it
+                </p>
+              )}
               {jobs.map((job, i) => (
                 <SavedJobCard
                   key={job.id}

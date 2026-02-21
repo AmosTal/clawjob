@@ -217,24 +217,28 @@ export default function CVPreviewModal({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-50 bg-black/60"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             onClick={onClose}
           />
 
           {/* Bottom sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-[70px] z-50 mx-auto max-h-[85vh] max-w-[430px] overflow-y-auto rounded-t-2xl border-t border-zinc-700/50 bg-zinc-900 px-4 pb-8 pt-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Apply to ${job.role} at ${job.company}`}
+            className="fixed inset-x-0 bottom-[calc(74px+env(safe-area-inset-bottom))] z-50 mx-auto max-h-[85vh] max-w-[430px] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-zinc-700/50 bg-zinc-900 px-4 pb-8 pt-4"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={{ y: "100%", transition: { duration: 0.25, ease: [0.32, 0, 0.67, 0] } }}
+            transition={{ type: "spring", damping: 30, stiffness: 340, mass: 0.9 }}
           >
             {/* Drag handle */}
-            <div className="mb-5 flex justify-center">
-              <div className="h-1 w-10 rounded-full bg-zinc-600" />
+            <div className="mb-5 flex justify-center pt-1 pb-1">
+              <div className="h-1.5 w-10 rounded-full bg-zinc-500" />
             </div>
 
             {/* Job info header */}
@@ -284,6 +288,7 @@ export default function CVPreviewModal({
                   <select
                     value={selectedCvId ?? ""}
                     onChange={(e) => setSelectedCvId(e.target.value)}
+                    aria-label="Select CV version"
                     className="w-full appearance-none rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-sm text-white outline-none transition-colors focus:border-emerald-500"
                   >
                     {localCvVersions.map((cv) => (
@@ -426,8 +431,9 @@ export default function CVPreviewModal({
                   }
                 }}
                 placeholder="Add a brief note to the hiring manager..."
+                aria-label="Cover note to hiring manager"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
+                className="w-full resize-none rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
               />
             </div>
 
@@ -436,7 +442,7 @@ export default function CVPreviewModal({
               <button
                 onClick={onClose}
                 disabled={sending}
-                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50"
+                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50 touch-manipulation min-h-[48px]"
               >
                 Cancel
               </button>
@@ -448,8 +454,10 @@ export default function CVPreviewModal({
                   setSending(false);
                 }}
                 disabled={sending}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
-                whileTap={{ scale: 0.97 }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50 touch-manipulation min-h-[48px]"
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 {sending ? (
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -125,6 +125,7 @@ const BriefcaseIcon = (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
@@ -141,6 +142,7 @@ const UsersIcon = (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
@@ -159,6 +161,7 @@ const ClockIcon = (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
@@ -221,6 +224,7 @@ function EmptyJobsState({ onPost }: { onPost: () => void }) {
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -238,7 +242,7 @@ function EmptyJobsState({ onPost }: { onPost: () => void }) {
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={onPost}
-        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[48px]"
       >
         <svg
           width="16"
@@ -249,6 +253,7 @@ function EmptyJobsState({ onPost }: { onPost: () => void }) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          aria-hidden="true"
         >
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -357,6 +362,7 @@ function JobCardRow({
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
+            aria-hidden="true"
           >
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
@@ -372,6 +378,7 @@ function JobCardRow({
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
+              aria-hidden="true"
             >
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -383,10 +390,10 @@ function JobCardRow({
 
       {/* Quick action buttons */}
       <div className="mt-3 flex gap-2">
-        <button className="flex-1 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20">
+        <button className="flex-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[11px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 touch-manipulation min-h-[36px]" aria-label={`View applications for ${job.role}`}>
           View Apps
         </button>
-        <button className="flex-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-700">
+        <button className="flex-1 rounded-xl bg-zinc-800 px-3 py-2 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-700 touch-manipulation min-h-[36px]" aria-label={`Edit ${job.role} listing`}>
           Edit
         </button>
       </div>
@@ -560,7 +567,7 @@ export default function EmployerDashboard() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => router.push("/employer/post-job")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 touch-manipulation min-h-[48px]"
           >
             <svg
               width="18"
@@ -571,6 +578,7 @@ export default function EmployerDashboard() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -581,13 +589,13 @@ export default function EmployerDashboard() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => router.push("/employer?tab=applications")}
-              className="rounded-xl bg-zinc-900 px-3 py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-700/40 bg-zinc-900 px-3 py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 touch-manipulation min-h-[44px]"
             >
               View All Applications
             </button>
             <button
               onClick={() => router.push("/profile")}
-              className="rounded-xl bg-zinc-900 px-3 py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-700/40 bg-zinc-900 px-3 py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 touch-manipulation min-h-[44px]"
             >
               Manage Profile
             </button>

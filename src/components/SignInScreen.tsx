@@ -97,13 +97,13 @@ export default function SignInScreen() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900 p-6">
+        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900 p-6 shadow-xl shadow-black/30">
           {/* Google Sign-In */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 font-medium text-black transition-colors hover:bg-zinc-100 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 font-medium text-black transition-colors hover:bg-zinc-100 disabled:opacity-60 touch-manipulation min-h-[48px]"
           >
             {googleLoading ? (
               <Spinner className="h-5 w-5 border-zinc-400" />
@@ -127,24 +127,27 @@ export default function SignInScreen() {
             <div>
               <input
                 type="email"
+                inputMode="email"
+                autoComplete="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 aria-label="Email address"
-                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
               />
             </div>
             <div>
               <input
                 type="password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
                 aria-label="Password"
-                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
               />
               {isSignUp && (
                 <p className="mt-1.5 text-xs text-zinc-500">
@@ -170,7 +173,7 @@ export default function SignInScreen() {
               whileTap={{ scale: 0.97 }}
               type="submit"
               disabled={emailLoading}
-              className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-lg shadow-emerald-600/20 transition-colors hover:bg-emerald-500 disabled:opacity-60 touch-manipulation min-h-[48px]"
             >
               {emailLoading ? (
                 <Spinner className="h-5 w-5 border-emerald-300" />
@@ -191,7 +194,7 @@ export default function SignInScreen() {
                 setIsSignUp(!isSignUp);
                 setError("");
               }}
-              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300 touch-manipulation py-1"
             >
               {isSignUp ? "Sign in" : "Sign up"}
             </button>

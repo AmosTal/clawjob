@@ -140,7 +140,7 @@ export default function AdminDashboard() {
               initial="hidden"
               animate="visible"
               variants={fadeUp}
-              className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition-colors"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 hover:border-zinc-700 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className={`p-2.5 rounded-lg ${c.bg}`}>
@@ -163,7 +163,7 @@ export default function AdminDashboard() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
-          className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-6"
+          className="lg:col-span-2 rounded-xl border border-zinc-800 bg-zinc-900 p-6"
         >
           <h2 className="text-sm font-semibold text-zinc-300 mb-4">
             Application Trends
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.4 }}
-          className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4"
+          className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 space-y-4"
         >
           <h2 className="text-sm font-semibold text-zinc-300">
             Quick Actions
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
           <div className="space-y-3">
             <Link
               href="/admin/jobs"
-              className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-sm font-medium"
+              className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-500 transition-colors hover:bg-emerald-500/20"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
             </Link>
             <Link
               href="/admin/users"
-              className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-750 hover:text-zinc-100 transition-colors text-sm font-medium"
+              className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800 p-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-100"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
             </Link>
             <Link
               href="/admin/jobs"
-              className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-750 hover:text-zinc-100 transition-colors text-sm font-medium"
+              className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800 p-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-100"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />

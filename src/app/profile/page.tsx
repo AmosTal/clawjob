@@ -423,7 +423,7 @@ export default function ProfilePage() {
                   )}
                   {/* Camera overlay hint */}
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
@@ -439,12 +439,14 @@ export default function ProfilePage() {
                       if (e.key === "Enter") setEditingName(false);
                     }}
                     autoFocus
-                    className="w-full max-w-[240px] rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-center text-lg font-bold text-white outline-none focus:border-emerald-500"
+                    aria-label="Your name"
+                    className="w-full max-w-[240px] rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-1.5 text-center text-lg font-bold text-white outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
                   />
                 ) : (
                   <button
                     onClick={() => setEditingName(true)}
                     className="group flex items-center gap-1.5 text-lg font-bold text-white"
+                    aria-label="Edit your name"
                   >
                     {editName || "Set your name"}
                     <svg
@@ -455,6 +457,7 @@ export default function ProfilePage() {
                       strokeWidth={2}
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -477,6 +480,7 @@ export default function ProfilePage() {
                       strokeWidth={2}
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
@@ -520,7 +524,7 @@ export default function ProfilePage() {
 
               {/* Personal Info Section */}
               <motion.div variants={fadeUp}>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Personal Info
                 </h3>
                 <div className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
@@ -532,7 +536,7 @@ export default function ProfilePage() {
                       onChange={(e) => setEditBio(e.target.value)}
                       placeholder="Tell employers about yourself..."
                       rows={3}
-                      className="resize-none rounded-lg border border-zinc-700/50 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500"
+                      className="resize-none rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-base text-white placeholder-zinc-400 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
                     />
                   </div>
                 </div>
@@ -541,9 +545,14 @@ export default function ProfilePage() {
               {/* CV Versions Section */}
               <motion.div variants={fadeUp}>
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    My CVs
-                  </h3>
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      My CVs
+                    </h3>
+                    <p className="mt-0.5 text-[11px] text-zinc-600">
+                      Upload multiple versions for different roles
+                    </p>
+                  </div>
                   {cvVersions.length > 0 && (
                     <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400">
                       {cvVersions.length}
@@ -572,6 +581,7 @@ export default function ProfilePage() {
                               strokeWidth={1.5}
                               strokeLinecap="round"
                               strokeLinejoin="round"
+                              aria-hidden="true"
                             >
                               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                               <polyline points="14 2 14 8 20 8" />
@@ -589,7 +599,7 @@ export default function ProfilePage() {
                                     if (e.key === "Escape") setRenamingCvId(null);
                                   }}
                                   autoFocus
-                                  className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-700 px-2 py-0.5 text-sm font-medium text-white outline-none focus:border-emerald-500"
+                                  className="min-w-0 flex-1 rounded-lg border border-zinc-700/50 bg-zinc-800 px-2 py-0.5 text-sm font-medium text-white outline-none transition-colors focus:border-emerald-500"
                                 />
                               ) : (
                                 <button
@@ -599,6 +609,7 @@ export default function ProfilePage() {
                                   }}
                                   className="group/rename flex min-w-0 items-center gap-1"
                                   title="Click to rename"
+                                  aria-label={`Rename CV: ${cv.name}`}
                                 >
                                   <span className="truncate text-sm font-medium text-white">
                                     {cv.name}
@@ -611,6 +622,7 @@ export default function ProfilePage() {
                                     strokeWidth={2}
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
+                                    aria-hidden="true"
                                   >
                                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -634,8 +646,9 @@ export default function ProfilePage() {
                               rel="noopener noreferrer"
                               className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white"
                               title="View"
+                              aria-label={`View CV: ${cv.name}`}
                             >
-                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                                 <polyline points="15 3 21 3 21 9" />
                                 <line x1="10" y1="14" x2="21" y2="3" />
@@ -646,8 +659,9 @@ export default function ProfilePage() {
                                 onClick={() => handleSetDefaultCV(cv.id)}
                                 className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-emerald-400"
                                 title="Set as default"
+                                aria-label={`Set ${cv.name} as default CV`}
                               >
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                                 </svg>
                               </button>
@@ -657,11 +671,12 @@ export default function ProfilePage() {
                               disabled={deletingCvId === cv.id}
                               className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-red-400 disabled:opacity-50"
                               title="Delete"
+                              aria-label={`Delete CV: ${cv.name}`}
                             >
                               {deletingCvId === cv.id ? (
                                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
                               ) : (
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                   <polyline points="3 6 5 6 21 6" />
                                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                                 </svg>
@@ -687,9 +702,18 @@ export default function ProfilePage() {
                       if (file) handleFileUpload(file);
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 transition-colors ${dragging
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Upload CV: drop a file here or click to browse"
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors ${dragging
                       ? "border-emerald-500 bg-emerald-500/10"
-                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
+                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800"
                       }`}
                   >
                     <svg
@@ -700,6 +724,7 @@ export default function ProfilePage() {
                       strokeWidth={1.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                       <polyline points="17 8 12 3 7 8" />
@@ -739,6 +764,7 @@ export default function ProfilePage() {
                             handleCancelUpload();
                           }}
                           className="rounded px-2 py-0.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                          aria-label="Cancel CV upload"
                         >
                           Cancel
                         </button>
@@ -755,7 +781,7 @@ export default function ProfilePage() {
               <motion.button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50 touch-manipulation min-h-[48px]"
                 variants={fadeUp}
                 whileTap={{ scale: 0.98 }}
               >
@@ -768,16 +794,16 @@ export default function ProfilePage() {
 
               {/* Preferences Section */}
               <motion.div variants={fadeUp}>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Preferences
                 </h3>
                 <div className="flex flex-col divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-zinc-900">
                   {/* Dangerous Mode Toggle */}
                   <div className="flex items-center justify-between px-4 py-3.5">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-white">Dangerous Mode</span>
+                      <span className="text-sm font-medium text-white">Quick Apply</span>
                       <span className="text-xs text-zinc-500">
-                        {dangerousMode ? "Swipe right = Apply directly" : "Swipe right = Save to review later"}
+                        {dangerousMode ? "Swipe right applies instantly" : "Swipe right saves for review first"}
                       </span>
                     </div>
                     <button
@@ -801,13 +827,14 @@ export default function ProfilePage() {
                           showToast("Failed to update setting", "error");
                         }
                       }}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${dangerousMode ? "bg-red-500" : "bg-zinc-600"
+                      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors touch-manipulation ${dangerousMode ? "bg-red-500" : "bg-zinc-600"
                         }`}
                       role="switch"
                       aria-checked={dangerousMode}
+                      aria-label="Quick Apply mode"
                     >
                       <motion.span
-                        className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white"
+                        className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm"
                         animate={{ x: dangerousMode ? 20 : 0 }}
                         transition={{ type: "spring", stiffness: 500, damping: 30 }}
                       />
@@ -818,10 +845,10 @@ export default function ProfilePage() {
                   <button
                     onClick={handleSwitchRole}
                     disabled={switchingRole}
-                    className="flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-zinc-800/50 disabled:opacity-50"
+                    className="flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-zinc-800/50 disabled:opacity-50 touch-manipulation min-h-[48px]"
                   >
                     <div className="flex items-center gap-3">
-                      <svg className="h-4 w-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="h-4 w-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <polyline points="17 1 21 5 17 9" />
                         <path d="M3 11V9a4 4 0 014-4h14" />
                         <polyline points="7 23 3 19 7 15" />
@@ -840,7 +867,7 @@ export default function ProfilePage() {
                         </span>
                       </div>
                     </div>
-                    <svg className="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </button>
@@ -850,7 +877,7 @@ export default function ProfilePage() {
               {/* Sign Out */}
               <motion.button
                 onClick={handleSignOut}
-                className="w-full rounded-xl border border-zinc-800 py-3 text-sm font-medium text-red-400 transition-colors hover:border-red-500/30 hover:bg-red-500/5"
+                className="w-full rounded-xl border border-zinc-800 py-3.5 text-sm font-medium text-red-400 transition-colors hover:border-red-500/30 hover:bg-red-500/5 touch-manipulation min-h-[48px]"
                 variants={fadeUp}
                 whileTap={{ scale: 0.98 }}
               >

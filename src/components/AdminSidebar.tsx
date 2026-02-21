@@ -74,7 +74,7 @@ export default function AdminSidebar() {
         </div>
         <div>
           <p className="text-sm font-semibold text-zinc-100">MyWhisper</p>
-          <span className="text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+          <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500">
             ADMIN
           </span>
         </div>
@@ -108,7 +108,7 @@ export default function AdminSidebar() {
       <div className="px-5 py-4 border-t border-zinc-800">
         <Link
           href="/"
-          className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
@@ -124,9 +124,10 @@ export default function AdminSidebar() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200"
+        className="fixed top-4 left-4 z-50 lg:hidden rounded-xl border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        aria-label="Open navigation menu"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <line x1="3" y1="6" x2="21" y2="6" />
           <line x1="3" y1="12" x2="21" y2="12" />
           <line x1="3" y1="18" x2="21" y2="18" />
@@ -159,8 +160,9 @@ export default function AdminSidebar() {
               <button
                 onClick={() => setMobileOpen(false)}
                 className="absolute top-4 right-4 p-1 text-zinc-500 hover:text-zinc-300"
+                aria-label="Close navigation menu"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>

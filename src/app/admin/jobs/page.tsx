@@ -107,7 +107,7 @@ export default function AdminJobsPage() {
             Manage all job listings on the platform
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors self-start">
+        <button className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 self-start">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -130,12 +130,12 @@ export default function AdminJobsPage() {
           placeholder="Search jobs by title, company, or location..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+          className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
         />
       </div>
 
       {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -252,7 +252,7 @@ export default function AdminJobsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="px-3 py-1.5 text-xs rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -261,7 +261,7 @@ export default function AdminJobsPage() {
                   setPage((p) => Math.min(totalPages - 1, p + 1))
                 }
                 disabled={page >= totalPages - 1}
-                className="px-3 py-1.5 text-xs rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -276,7 +276,7 @@ export default function AdminJobsPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-sm w-full mx-4 space-y-4"
+            className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 max-w-sm w-full mx-4 space-y-4"
           >
             <div className="w-12 h-12 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
@@ -297,13 +297,13 @@ export default function AdminJobsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteId(null)}
-                className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(deleteId)}
-                className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
               >
                 Delete
               </button>

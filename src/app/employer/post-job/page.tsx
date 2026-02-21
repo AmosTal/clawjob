@@ -152,7 +152,8 @@ export default function PostJobPage() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => router.back()}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-zinc-400"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-zinc-400 touch-manipulation"
+            aria-label="Go back"
           >
             <svg
               width="20"
@@ -163,6 +164,7 @@ export default function PostJobPage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M19 12H5" />
               <path d="M12 19l-7-7 7-7" />
@@ -253,7 +255,7 @@ export default function PostJobPage() {
           </Section>
 
           {/* Manager Info */}
-          <Section title="Hiring Manager">
+          <Section title="Hiring Manager" optional>
             <Input
               label="Name"
               value={managerName}
@@ -281,7 +283,7 @@ export default function PostJobPage() {
           </Section>
 
           {/* HR Info */}
-          <Section title="HR Contact">
+          <Section title="HR Contact" optional>
             <Input
               label="Name"
               value={hrName}
@@ -316,14 +318,14 @@ export default function PostJobPage() {
           </Section>
 
           {/* Team & Culture */}
-          <Section title="Team & Culture">
+          <Section title="Team & Culture" optional>
             <Input
               label="Team Size"
               value={teamSize}
               onChange={setTeamSize}
               placeholder="e.g. 8-12 engineers"
             />
-            <label className="block text-xs font-medium text-zinc-400 mb-1">
+            <label className="mb-1 block text-xs font-medium text-zinc-400">
               Culture Attributes
             </label>
             <DynamicList
@@ -341,7 +343,7 @@ export default function PostJobPage() {
             whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+            className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60 touch-manipulation min-h-[48px]"
           >
             {submitting ? (
               <span className="inline-flex items-center gap-2">
@@ -363,13 +365,22 @@ export default function PostJobPage() {
 function Section({
   title,
   children,
+  optional,
 }: {
   title: string;
   children: React.ReactNode;
+  optional?: boolean;
 }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold text-zinc-300">{title}</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+        {optional && (
+          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+            Optional
+          </span>
+        )}
+      </div>
       {children}
     </div>
   );
@@ -398,7 +409,7 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+        className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-base text-white placeholder-zinc-400 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
       />
     </div>
   );
@@ -425,7 +436,7 @@ function TextArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-none"
+        className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-base text-white placeholder-zinc-400 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 resize-none"
       />
     </div>
   );
@@ -463,13 +474,14 @@ function DynamicList({
             value={item}
             onChange={(e) => onUpdate(items, setItems, i, e.target.value)}
             placeholder={placeholder}
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+            className="flex-1 rounded-xl border border-zinc-700/50 bg-zinc-800 px-3.5 py-2.5 text-base text-white placeholder-zinc-400 outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
           />
           {items.length > 1 && (
             <button
               type="button"
               onClick={() => onRemove(items, setItems, i)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-zinc-500 hover:text-red-400"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500 transition-colors hover:text-red-400 hover:bg-red-500/10 touch-manipulation"
+              aria-label={`Remove item ${i + 1}`}
             >
               <svg
                 width="16"
@@ -478,6 +490,7 @@ function DynamicList({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
+                aria-hidden="true"
               >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
@@ -489,7 +502,7 @@ function DynamicList({
       <button
         type="button"
         onClick={() => onAdd(items, setItems)}
-        className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
+        className="flex items-center gap-1 py-2 text-xs text-emerald-400 hover:text-emerald-300 touch-manipulation"
       >
         <svg
           width="14"
@@ -498,6 +511,7 @@ function DynamicList({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
+          aria-hidden="true"
         >
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
