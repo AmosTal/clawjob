@@ -160,13 +160,13 @@ const CULTURE_REGEXES = CULTURE_SIGNALS.map(
 // ── Section header patterns ─────────────────────────────────────────
 
 const REQUIREMENT_HEADERS =
-  /(?:^|\n)\s*#{0,4}\s*(?:requirements?|what\s+you(?:'ll|\s+will)\s+(?:need|bring)|qualifications?|about\s+you|who\s+you\s+are|your\s+(?:background|experience|skills)|must[- ]hav(?:e|es)|minimum\s+qualifications?|what\s+we(?:'re|\s+are)\s+looking\s+for|desired\s+skills?|key\s+skills?)\s*[:：\-—]?\s*\n?/gi;
+  /(?:^|\n)\s*#{0,4}\s*(?:requirements?|what\s+you(?:'ll|\s+will)\s+(?:need|bring)|qualifications?|about\s+you|who\s+you\s+are|your\s+(?:background|experience|skills)|must[- ]hav(?:e|es)|minimum\s+qualifications?|what\s+we(?:'re|\s+are)\s+looking\s+for|desired\s+skills?|key\s+skills?)\s*[:：\-—]?\s*\n?/i;
 
 const BENEFIT_HEADERS =
-  /(?:^|\n)\s*#{0,4}\s*(?:benefits?|what\s+we\s+offer|perks?|compensation(?:\s+(?:and|&)\s+benefits?)?|why\s+(?:join\s+us|work\s+(?:here|with\s+us))|our\s+(?:offer|perks|benefits)|total\s+rewards?)\s*[:：\-—]?\s*\n?/gi;
+  /(?:^|\n)\s*#{0,4}\s*(?:benefits?|what\s+we\s+offer|perks?|compensation(?:\s+(?:and|&)\s+benefits?)?|why\s+(?:join\s+us|work\s+(?:here|with\s+us))|our\s+(?:offer|perks|benefits)|total\s+rewards?)\s*[:：\-—]?\s*\n?/i;
 
 const TEAM_HEADERS =
-  /(?:^|\n)\s*#{0,4}\s*(?:(?:about\s+)?(?:the\s+)?team|team\s+size|who\s+we\s+are|the\s+role|about\s+(?:the\s+)?(?:team|group|org))\s*[:：\-—]?\s*\n?/gi;
+  /(?:^|\n)\s*#{0,4}\s*(?:(?:about\s+)?(?:the\s+)?team|team\s+size|who\s+we\s+are|the\s+role|about\s+(?:the\s+)?(?:team|group|org))\s*[:：\-—]?\s*\n?/i;
 
 // ── Salary patterns ─────────────────────────────────────────────────
 
@@ -304,13 +304,6 @@ function isTeamHeader(header: string): boolean {
   return TEAM_HEADERS.test(`\n${header}:\n`);
 }
 
-// Reset lastIndex on all section regexes to avoid stateful issues
-function resetRegexes(): void {
-  REQUIREMENT_HEADERS.lastIndex = 0;
-  BENEFIT_HEADERS.lastIndex = 0;
-  TEAM_HEADERS.lastIndex = 0;
-}
-
 // ── Main parser ─────────────────────────────────────────────────────
 
 export function parseJobDescription(description: string): ParsedJobData {
@@ -331,7 +324,6 @@ export function parseJobDescription(description: string): ParsedJobData {
   const sections = splitSections(text);
 
   for (const section of sections) {
-    resetRegexes();
 
     if (section.header && isRequirementHeader(section.header)) {
       const bullets = extractBullets(section.body);
@@ -347,7 +339,6 @@ export function parseJobDescription(description: string): ParsedJobData {
       }
     }
 
-    resetRegexes();
 
     if (section.header && isBenefitHeader(section.header)) {
       const bullets = extractBullets(section.body);
@@ -362,7 +353,6 @@ export function parseJobDescription(description: string): ParsedJobData {
       }
     }
 
-    resetRegexes();
 
     if (section.header && isTeamHeader(section.header)) {
       // Try to extract team size from team section

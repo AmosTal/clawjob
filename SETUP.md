@@ -63,3 +63,60 @@ This guide walks through obtaining each API key used by the application. All key
 3. Set `BRANDFETCH_API_KEY` in your `.env`
 
 **Free tier:** Limited requests/month
+
+---
+
+## Cloud Scheduler (Cron Jobs)
+
+The app has two cron endpoints that should be triggered on a schedule in production. Both require a `CRON_SECRET` environment variable set on Cloud Run.
+
+### Prerequisites
+
+```bash
+# Set your project and Cloud Run service URL
+PROJECT_ID="clawjob"
+REGION="us-central1"
+SERVICE_URL="$(gcloud run services describe clawjob --region=$REGION --project=$PROJECT_ID --format='value(status.url)')"
+CRON_SECRET="your-cron-secret-here"
+```
+
+### Create the scrape job (every 6 hours)
+
+```bash
+gcloud scheduler jobs create http clawjob-scrape \
+  --project=$PROJECT_ID \
+  --location=$REGION \
+  --schedule="0 */6 * * *" \
+  --uri="${SERVICE_URL}/api/cron/scrape" \
+  --http-method=POST \
+  --headers="Authorization=Bearer ${CRON_SECRET}" \
+  --time-zone="UTC" \
+  --description="Scrape job boards for new listings every 6 hours" \
+  --attempt-deadline="300s"
+```
+
+### Create the enrich job (every 5 minutes)
+
+```bash
+gcloud scheduler jobs create http clawjob-enrich \
+  --project=$PROJECT_ID \
+  --location=$REGION \
+  --schedule="*/5 * * * *" \
+  --uri="${SERVICE_URL}/api/cron/enrich" \
+  --http-method=POST \
+  --headers="Authorization=Bearer ${CRON_SECRET}" \
+  --time-zone="UTC" \
+  --description="Enrich pending job listings every 5 minutes" \
+  --attempt-deadline="120s"
+```
+
+### Verify
+
+```bash
+# List scheduled jobs
+gcloud scheduler jobs list --project=$PROJECT_ID --location=$REGION
+
+# Manually trigger a job to test
+gcloud scheduler jobs run clawjob-scrape --project=$PROJECT_ID --location=$REGION
+gcloud scheduler jobs run clawjob-enrich --project=$PROJECT_ID --location=$REGION
+```

@@ -148,6 +148,7 @@ async function fetchCompanyJobs(slug: string): Promise<NormalizedJob[]> {
     tags: extractTags(job),
     sourceUrl: job.absolute_url,
     sourceId: `greenhouse-${job.id}`,
+    sourceName: "greenhouse",
     source: "greenhouse",
     createdAt: job.updated_at ?? new Date().toISOString(),
   }));

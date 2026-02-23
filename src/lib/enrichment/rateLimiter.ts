@@ -156,6 +156,6 @@ export const rateLimiters = {
   proxycurl: new RateLimiter("proxycurl", { requestsPerMinute: 10 }),
   hunter: new RateLimiter("hunter", { requestsPerDay: 25 }),
   jsearch: new RateLimiter("jsearch", { requestsPerSecond: 1 }),
-  adzuna: new RateLimiter("adzuna", { requestsPerMinute: 5 }),
+  adzuna: new RateLimiter("adzuna", { requestsPerMinute: 10, requestsPerDay: 250 }),
   generatedPhotos: new RateLimiter("generatedPhotos", { requestsPerDay: 100 }),
 };

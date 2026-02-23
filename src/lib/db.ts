@@ -55,6 +55,11 @@ const LISTING_FIELDS = [
   "tags",
   "companyLogo",
   "createdAt",
+  "sourceName",
+  "sourceUrl",
+  "applyUrl",
+  "enrichmentStatus",
+  "employerId",
 ] as const;
 
 export async function getJobsForListing(
@@ -130,6 +135,9 @@ export async function createApplication(
     status: "applied",
     message: message ?? null,
     appliedAt: new Date().toISOString(),
+    sourceUrl: job.sourceUrl ?? null,
+    applyUrl: job.applyUrl ?? null,
+    sourceName: job.sourceName ?? null,
   };
   if (resumeVersionId) data.resumeVersionId = resumeVersionId;
 
@@ -142,6 +150,7 @@ export async function getUserApplications(
 ): Promise<Application[]> {
   const snap = await applicationsCol
     .where("userId", "==", userId)
+    .orderBy("appliedAt", "desc")
     .get();
   return snap.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() }) as Application
@@ -353,18 +362,18 @@ export async function getAdminStats(): Promise<{
   const cached = getCached<StatsResult>(ADMIN_STATS_CACHE_KEY);
   if (cached) return cached;
 
-  const [jobsSnap, usersSnap, appsSnap, employersSnap] = await Promise.all([
-    jobsCol.select().get(),
-    usersCol.select().get(),
-    applicationsCol.select().get(),
-    usersCol.where("role", "==", "employer").select().get(),
+  const [jobsCount, usersCount, appsCount, employersCount] = await Promise.all([
+    jobsCol.count().get(),
+    usersCol.count().get(),
+    applicationsCol.count().get(),
+    usersCol.where("role", "==", "employer").count().get(),
   ]);
 
   const stats: StatsResult = {
-    totalJobs: jobsSnap.size,
-    totalUsers: usersSnap.size,
-    totalApplications: appsSnap.size,
-    activeEmployers: employersSnap.size,
+    totalJobs: jobsCount.data().count,
+    totalUsers: usersCount.data().count,
+    totalApplications: appsCount.data().count,
+    activeEmployers: employersCount.data().count,
   };
 
   setCache(ADMIN_STATS_CACHE_KEY, stats, ADMIN_STATS_TTL_MS);
@@ -375,14 +384,15 @@ export async function getAllUsers(
   limit = 20,
   offset = 0
 ): Promise<{ users: UserProfile[]; total: number }> {
-  const countSnap = await usersCol.select().get();
-  const total = countSnap.size;
-
-  const snap = await usersCol
-    .orderBy("createdAt", "desc")
-    .offset(offset)
-    .limit(limit)
-    .get();
+  const [countResult, snap] = await Promise.all([
+    usersCol.count().get(),
+    usersCol
+      .orderBy("createdAt", "desc")
+      .offset(offset)
+      .limit(limit)
+      .get(),
+  ]);
+  const total = countResult.data().count;
 
   const users = snap.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() }) as UserProfile
@@ -395,14 +405,15 @@ export async function getAllJobs(
   limit = 20,
   offset = 0
 ): Promise<{ jobs: JobCard[]; total: number }> {
-  const countSnap = await jobsCol.select().get();
-  const total = countSnap.size;
-
-  const snap = await jobsCol
-    .orderBy("createdAt", "desc")
-    .offset(offset)
-    .limit(limit)
-    .get();
+  const [countResult, snap] = await Promise.all([
+    jobsCol.count().get(),
+    jobsCol
+      .orderBy("createdAt", "desc")
+      .offset(offset)
+      .limit(limit)
+      .get(),
+  ]);
+  const total = countResult.data().count;
 
   const jobs = snap.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() }) as JobCard
@@ -678,12 +689,13 @@ export async function updateJobEnrichment(
 export async function getJobsBySource(
   sourceName: string,
   limit = 50
-): Promise<JobCard[]> {
+): Promise<Pick<JobCard, "id" | "sourceId" | "sourceName" | "company" | "role">[]> {
   const snap = await jobsCol
     .where("sourceName", "==", sourceName)
+    .select("sourceId", "sourceName", "company", "role")
     .limit(limit)
     .get();
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as JobCard);
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Pick<JobCard, "id" | "sourceId" | "sourceName" | "company" | "role">);
 }
 
 export async function getEnrichmentStats(): Promise<{
@@ -692,30 +704,19 @@ export async function getEnrichmentStats(): Promise<{
   enriched: number;
   failed: number;
 }> {
-  // Fetch all jobs with minimal data (only enrichmentStatus)
-  const snap = await jobsCol.select("enrichmentStatus").get();
+  const [totalResult, pendingResult, enrichedResult, failedResult, failedPermResult] =
+    await Promise.all([
+      jobsCol.count().get(),
+      jobsCol.where("enrichmentStatus", "==", "pending").count().get(),
+      jobsCol.where("enrichmentStatus", "==", "enriched").count().get(),
+      jobsCol.where("enrichmentStatus", "==", "failed").count().get(),
+      jobsCol.where("enrichmentStatus", "==", "failed_permanent").count().get(),
+    ]);
 
-  let pending = 0;
-  let enriched = 0;
-  let failed = 0;
-
-  for (const doc of snap.docs) {
-    const status = doc.data().enrichmentStatus as string | undefined;
-    switch (status) {
-      case "enriched":
-        enriched++;
-        break;
-      case "failed":
-      case "failed_permanent":
-        failed++;
-        break;
-      case "pending":
-      default:
-        // "pending", undefined/null, or any other value counts as pending
-        pending++;
-        break;
-    }
-  }
-
-  return { total: snap.size, pending, enriched, failed };
+  return {
+    total: totalResult.data().count,
+    pending: pendingResult.data().count,
+    enriched: enrichedResult.data().count,
+    failed: failedResult.data().count + failedPermResult.data().count,
+  };
 }

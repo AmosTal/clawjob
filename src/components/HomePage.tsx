@@ -68,6 +68,15 @@ export default function HomePage() {
     return displayed;
   }, [jobs, filters]);
 
+  // Count unique sources
+  const sourceCount = useMemo(() => {
+    const set = new Set<string>();
+    for (const j of jobs) {
+      if (j.sourceName) set.add(j.sourceName);
+    }
+    return set.size;
+  }, [jobs]);
+
   // Stable key to force SwipeDeck remount when filters change
   const filterKey = `${filters.remote}-${filters.location}-${filters.tags.join(",")}`;
 
@@ -152,7 +161,7 @@ export default function HomePage() {
               className="mb-3 flex justify-center"
             >
               <span className="rounded-full bg-zinc-800/80 px-3 py-1 text-[11px] font-medium text-zinc-400">
-                {displayedJobs.length} of {totalJobs} jobs remaining
+                {displayedJobs.length} jobs available{sourceCount > 0 ? ` from ${sourceCount} source${sourceCount !== 1 ? "s" : ""}` : ""}
               </span>
             </motion.div>
           )}

@@ -77,6 +77,9 @@ export interface Application {
   message?: string;
   resumeVersionId?: string;
   appliedAt: string;
+  sourceUrl?: string;
+  applyUrl?: string;
+  sourceName?: string;
 }
 
 export interface UserProfile {

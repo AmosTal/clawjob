@@ -89,6 +89,7 @@ function mapJob(job: JSearchJob): NormalizedJob {
     companyLogo: job.employer_logo || clearbitLogo(job.employer_name),
     createdAt:
       job.job_posted_at_datetime_utc ?? new Date().toISOString(),
+    sourceName: "jsearch",
     source: "jsearch",
     sourceUrl: job.job_apply_link,
     sourceId: job.job_id,

@@ -31,11 +31,11 @@ const SEARCH_KEYWORDS = ["software developer", "software engineer"];
 
 /** Format min/max salary into a GBP string. */
 function formatSalaryGBP(min?: number | null, max?: number | null): string | undefined {
-  if (!min && !max) return undefined;
+  if (min == null && max == null) return undefined;
   const fmt = (n: number) =>
     n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${n}`;
-  if (min && max) return `${fmt(min)} - ${fmt(max)}`;
-  if (min) return `${fmt(min)}+`;
+  if (min != null && max != null) return `${fmt(min)} - ${fmt(max)}`;
+  if (min != null) return `${fmt(min)}+`;
   return `Up to ${fmt(max!)}`;
 }
 
@@ -95,6 +95,7 @@ function normalize(job: ReedJob): NormalizedJob {
     tags,
     sourceUrl: job.jobUrl,
     sourceId: String(job.jobId),
+    sourceName: "reed",
     source: "reed",
     createdAt: job.date ?? new Date().toISOString(),
   };

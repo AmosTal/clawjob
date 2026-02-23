@@ -81,6 +81,7 @@ function normalize(job: AdzunaJob): NormalizedJob {
     tags,
     sourceUrl: job.redirect_url,
     sourceId: String(job.id),
+    sourceName: "adzuna",
     source: "adzuna",
     createdAt: job.created ?? new Date().toISOString(),
   };

@@ -13,6 +13,59 @@
 
 import { adminStorage } from "../firebase-admin";
 import { logger } from "../logger";
+import { validateURL } from "../validation";
+
+/** Allowlisted domains for fetching external images (SSRF protection). */
+const ALLOWED_IMAGE_DOMAINS = new Set([
+  "media.licdn.com",
+  "media-exp1.licdn.com",
+  "media-exp2.licdn.com",
+  "static.licdn.com",
+  "platform-lookaside.fbsbx.com",
+  "lh3.googleusercontent.com",
+  "pbs.twimg.com",
+  "avatars.githubusercontent.com",
+  "www.gravatar.com",
+  "ui-avatars.com",
+  "logo.clearbit.com",
+  "storage.googleapis.com",
+  "api.generated.photos",
+  "images.generated.photos",
+  "thispersondoesnotexist.com",
+]);
+
+/**
+ * Validate a URL is safe to fetch (not an internal/private address).
+ * Returns the URL if valid, null otherwise.
+ */
+function validateImageUrl(url: string): string | null {
+  const validated = validateURL(url);
+  if (!validated) return null;
+  try {
+    const parsed = new URL(validated);
+    // Block private/internal IPs and localhost
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "[::1]" ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
+      hostname === "metadata.google.internal" ||
+      hostname === "169.254.169.254"
+    ) {
+      logger.warn("Blocked fetch to private/internal URL", { source: "photos", hostname });
+      return null;
+    }
+    return validated;
+  } catch {
+    return null;
+  }
+}
 
 const GENERATED_PHOTOS_API_KEY = process.env.GENERATED_PHOTOS_API_KEY ?? "";
 
@@ -48,12 +101,18 @@ async function md5(input: string): Promise<string> {
 
 async function tryLinkedInPhoto(linkedinPhotoUrl?: string): Promise<string | null> {
   if (!linkedinPhotoUrl) return null;
-  const valid = await isValidImageUrl(linkedinPhotoUrl);
+  // SSRF protection: validate the URL before fetching
+  const safeUrl = validateImageUrl(linkedinPhotoUrl);
+  if (!safeUrl) {
+    logger.warn("LinkedIn photo URL rejected by SSRF validation", { source: "photos" });
+    return null;
+  }
+  const valid = await isValidImageUrl(safeUrl);
   if (valid) {
     logger.debug("Using LinkedIn photo", { source: "photos" });
-    return linkedinPhotoUrl;
+    return safeUrl;
   }
-  logger.debug("LinkedIn photo URL invalid or unreachable", { source: "photos", url: linkedinPhotoUrl });
+  logger.debug("LinkedIn photo URL invalid or unreachable", { source: "photos" });
   return null;
 }
 
@@ -156,14 +215,20 @@ export async function uploadToFirebaseStorage(
   imageUrl: string,
   storagePath: string,
 ): Promise<string> {
+  // SSRF protection: validate the URL before fetching
+  const safeUrl = validateImageUrl(imageUrl);
+  if (!safeUrl) {
+    throw new Error("Image URL rejected by SSRF validation");
+  }
+
   // Download the image
-  const res = await fetch(imageUrl, {
+  const res = await fetch(safeUrl, {
     signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) {
     throw new Error(
-      `Failed to download image from ${imageUrl}: ${res.status} ${res.statusText}`,
+      `Failed to download image: ${res.status} ${res.statusText}`,
     );
   }
 

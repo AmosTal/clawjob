@@ -126,6 +126,7 @@ async function fetchCompany(slug: string): Promise<NormalizedJob[]> {
         createdAt: p.createdAt
           ? new Date(p.createdAt).toISOString()
           : new Date().toISOString(),
+        sourceName: "lever",
         source: "lever",
         sourceUrl: p.hostedUrl,
         sourceId: p.id,

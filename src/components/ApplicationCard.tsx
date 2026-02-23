@@ -229,17 +229,35 @@ export default function ApplicationCard({
         </div>
       )}
 
-      {application.status === "applied" && (
-        <motion.button
-          onClick={handleWithdraw}
-          disabled={withdrawing}
-          className="mt-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:text-red-300 disabled:opacity-50 touch-manipulation"
-          whileTap={{ scale: 0.95 }}
-          aria-label={`Withdraw application for ${application.jobTitle} at ${application.company}`}
-        >
-          {withdrawing ? "Withdrawing..." : "Withdraw Application"}
-        </motion.button>
-      )}
+      {/* Actions row */}
+      <div className="mt-3 flex items-center gap-3">
+        {(application.sourceUrl || application.applyUrl) && (
+          <a
+            href={application.applyUrl || application.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 py-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            View original posting &rarr;
+          </a>
+        )}
+        {application.status === "applied" && (
+          <motion.button
+            onClick={handleWithdraw}
+            disabled={withdrawing}
+            className="py-1.5 text-xs font-medium text-red-400 transition-colors hover:text-red-300 disabled:opacity-50 touch-manipulation"
+            whileTap={{ scale: 0.95 }}
+            aria-label={`Withdraw application for ${application.jobTitle} at ${application.company}`}
+          >
+            {withdrawing ? "Withdrawing..." : "Withdraw"}
+          </motion.button>
+        )}
+      </div>
     </motion.div>
   );
 }

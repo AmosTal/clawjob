@@ -111,6 +111,7 @@ export const theMuseAdapter: ScraperAdapter = {
             benefits: perks.length > 0 ? perks : undefined,
             companyLogo: j.company.logo || clearbitLogo(j.company.name),
             createdAt: j.publication_date || new Date().toISOString(),
+            sourceName: "themuse",
             source: "themuse",
             sourceUrl: j.refs?.landing_page,
             sourceId: String(j.id),

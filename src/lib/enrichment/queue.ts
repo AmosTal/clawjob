@@ -102,24 +102,28 @@ export async function markJobEnrichmentFailed(
   db: Firestore,
 ): Promise<void> {
   const docRef = db.collection(JOBS_COLLECTION).doc(jobId);
-  const doc = await docRef.get();
-  const retries: number = (doc.data()?.enrichmentRetries ?? 0) + 1;
 
-  const status = retries >= MAX_RETRIES ? "failed_permanent" : "failed";
+  // Use a transaction to atomically read retries and decide final status,
+  // avoiding the read-then-write race condition in concurrent workers.
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const retries: number = (doc.data()?.enrichmentRetries ?? 0) + 1;
+    const status = retries >= MAX_RETRIES ? "failed_permanent" : "failed";
 
-  await docRef.update({
-    enrichmentStatus: status,
-    enrichmentError: error,
-    enrichmentRetries: retries,
-    enrichmentFailedAt: FieldValue.serverTimestamp(),
-  });
+    tx.update(docRef, {
+      enrichmentStatus: status,
+      enrichmentError: error,
+      enrichmentRetries: retries,
+      enrichmentFailedAt: FieldValue.serverTimestamp(),
+    });
 
-  logger.warn("Job enrichment failed", {
-    source: "enrichment-queue",
-    jobId,
-    retries,
-    permanent: status === "failed_permanent",
-    error,
+    logger.warn("Job enrichment failed", {
+      source: "enrichment-queue",
+      jobId,
+      retries,
+      permanent: status === "failed_permanent",
+      error,
+    });
   });
 }
 

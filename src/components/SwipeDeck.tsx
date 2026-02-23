@@ -216,6 +216,31 @@ export default function SwipeDeck({ jobs, loading, quickApply }: SwipeDeckProps)
     return <SkeletonCard />;
   }
 
+  if (jobs.length === 0) {
+    return (
+      <motion.div
+        className="flex h-[70dvh] flex-col items-center justify-center gap-4 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 24 }}
+      >
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/80">
+          <svg className="h-8 w-8 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-lg font-bold text-white">Fetching new jobs</p>
+          <p className="mx-auto mt-1.5 max-w-[280px] text-sm leading-relaxed text-zinc-400">
+            We&apos;re finding jobs from across the web — check back in a minute!
+          </p>
+        </div>
+        <span className="mt-2 inline-block h-5 w-5 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+      </motion.div>
+    );
+  }
+
   if (currentIndex >= jobs.length) {
     return (
       <EmptyState

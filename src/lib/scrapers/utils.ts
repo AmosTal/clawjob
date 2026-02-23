@@ -39,7 +39,7 @@ export function formatSalary(
   max?: number,
   period?: string
 ): string | undefined {
-  if (!min && !max) return undefined;
+  if (min == null && max == null) return undefined;
 
   const isHourly = period?.toLowerCase() === "hour";
   const suffix = isHourly ? "/hr" : "/yr";
@@ -48,8 +48,8 @@ export function formatSalary(
     return n >= 1000 ? `$${Math.round(n / 1000)}k` : `$${n}`;
   };
 
-  if (min && max) return `${fmt(min)} - ${fmt(max)}${suffix}`;
-  if (min) return `${fmt(min)}+${suffix}`;
+  if (min != null && max != null) return `${fmt(min)} - ${fmt(max)}${suffix}`;
+  if (min != null) return `${fmt(min)}+${suffix}`;
   return `Up to ${fmt(max!)}${suffix}`;
 }
 

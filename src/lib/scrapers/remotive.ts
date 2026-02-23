@@ -55,6 +55,7 @@ export const remotiveAdapter: ScraperAdapter = {
           description: truncate(stripHTML(j.description ?? ""), 2000),
           companyLogo: j.company_logo || clearbitLogo(j.company_name),
           createdAt: j.publication_date || new Date().toISOString(),
+          sourceName: "remotive",
           source: "remotive",
           sourceUrl: j.url,
           sourceId: j.id.toString(),

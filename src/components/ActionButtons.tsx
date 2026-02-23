@@ -29,11 +29,8 @@ export default function ActionButtons({
   externalUrl,
 }: ActionButtonsProps) {
   const handleApply = () => {
-    if (isExternal && externalUrl) {
-      window.open(externalUrl, "_blank", "noopener,noreferrer");
-    } else {
-      onApply();
-    }
+    // Always delegate to onApply — SwipeDeck handles external URL opening + tracking
+    onApply();
   };
   return (
     <div className="flex items-end justify-center gap-5 py-3">
@@ -133,7 +130,7 @@ export default function ActionButtons({
             whileTap={{ scale: 0.9 }}
             whileHover={{ scale: 1.06 }}
             transition={bounceTransition}
-            onClick={isExternal && externalUrl ? handleApply : onSwipeRight}
+            onClick={isExternal ? handleApply : onSwipeRight}
             aria-label={isExternal ? "View on external site" : "Apply to this job"}
           >
             {isExternal ? (

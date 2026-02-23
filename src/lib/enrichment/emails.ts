@@ -16,6 +16,12 @@ const HUNTER_BASE = "https://api.hunter.io/v2";
 const HUNTER_TIMEOUT_MS = 8_000;
 const MIN_CONFIDENCE = 50;
 
+/** Strip API keys from error messages to prevent leaking secrets in logs. */
+function sanitizeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.replace(/api_key=[^&\s]+/gi, "api_key=***");
+}
+
 // ── Types ────────────────────────────────────────────────────────────
 
 interface HunterEmailFinderResponse {
@@ -132,7 +138,7 @@ export async function findPersonEmail(
   } catch (err) {
     logger.error("Hunter email-finder request failed", {
       source: "enrichment:emails",
-      error: String(err),
+      error: sanitizeError(err),
       company,
     });
     return null;
@@ -233,7 +239,7 @@ export async function findCompanyHREmail(company: string): Promise<string> {
   } catch (err) {
     logger.error("Hunter domain-search request failed", {
       source: "enrichment:emails",
-      error: String(err),
+      error: sanitizeError(err),
       company,
     });
     return guessCompanyEmail(company, "careers");

@@ -12,6 +12,12 @@
 
 import { logger } from "../logger";
 
+/** Strip API keys from error messages to prevent leaking secrets in logs. */
+function sanitizeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.replace(/api_key=[^&\s]+/gi, "api_key=***");
+}
+
 // ── Config ──────────────────────────────────────────────────────────
 
 const GENERATED_PHOTOS_API_KEY = process.env.GENERATED_PHOTOS_API_KEY ?? "";
@@ -92,7 +98,7 @@ export async function preloadHeadshotPool(count = 20): Promise<void> {
   } catch (err) {
     logger.error("Failed to preload headshot pool", {
       source: "aiImages",
-      error: String(err),
+      error: sanitizeError(err),
     });
   }
 }
@@ -147,7 +153,7 @@ async function fetchFromGeneratedPhotos(
   } catch (err) {
     logger.error("Generated.Photos single fetch failed", {
       source: "aiImages",
-      error: String(err),
+      error: sanitizeError(err),
     });
     return null;
   }

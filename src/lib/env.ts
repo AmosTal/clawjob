@@ -12,8 +12,12 @@ const RECOMMENDED_SERVER_VARS = [
 
 const OPTIONAL_API_VARS: Record<string, string> = {
   RAPIDAPI_KEY: "JSearch scraper will be disabled — no RapidAPI job results",
+  ADZUNA_APP_ID: "Adzuna scraper will be disabled — no Adzuna job results",
+  ADZUNA_API_KEY: "Adzuna scraper will be disabled — no Adzuna job results",
+  REED_API_KEY: "Reed scraper will be disabled — no Reed job results",
   PROXYCURL_API_KEY: "Manager enrichment will use placeholder data instead of LinkedIn profiles",
   HUNTER_API_KEY: "Contact emails will be guessed from domain patterns instead of verified",
+  GENERATED_PHOTOS_API_KEY: "AI headshots will be disabled — placeholder avatars used instead",
 };
 
 export function validateEnv(): void {
